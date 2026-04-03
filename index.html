@@ -1,77 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Retenção</title>
 
-<meta charset="UTF-8">
-<title>Painel Retenção</title>
-
-<link rel="icon" type="image/png" href="icon.png">
-<link rel="stylesheet" href="style.css">
-
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<!-- LOGIN -->
+  <!-- LOGIN -->
+  <div id="loginScreen" class="card fade-up">
+    <h2>Login</h2>
 
-<div id="loginScreen" class="card">
+    <input id="matriculaInput" placeholder="Matrícula">
 
-<h2>Login</h2>
+    <button class="primary" onclick="login()">
+      Entrar
+    </button>
+  </div>
 
-<input id="matriculaInput" placeholder="Matrícula">
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="hidden">
+    <div class="card fade-up">
+      <h2>Painel</h2>
 
-<button class="primary" onclick="login()">Entrar</button>
+      <div id="operatorInfo"></div>
 
-</div>
+      <button class="primary" onclick="openFloatingPanel()">
+        Abrir painel
+      </button>
 
+      <!-- RESULTADOS -->
+      <div class="resultados">
+        <div class="stats-card">
+          <div class="stats-number" id="statTotal">0</div>
+          <div class="stats-label">Atendidas</div>
+        </div>
 
-<!-- DASHBOARD -->
+        <div class="stats-card">
+          <div class="stats-number" id="statRate">0%</div>
+          <div class="stats-label">Taxa de desc.</div>
+        </div>
+      </div>
 
-<div id="dashboard" class="hidden">
+      <!-- HISTÓRICO -->
+      <div class="history-section">
+        <div class="history-header">
+          <h3>Histórico de atendimentos</h3>
 
-<div class="card">
+          <button
+            id="toggleHistoryBtn"
+            class="ghost hidden"
+            type="button"
+            onclick="toggleHistory()">
+            Ver mais
+          </button>
+        </div>
 
-<h2>Painel</h2>
+        <div id="historyList" class="collapsed"></div>
+      </div>
+    </div>
+  </div>
 
-<div id="operatorInfo"></div>
-
-<button class="primary" onclick="openFloatingPanel()">
-Abrir painel
-</button>
-
-
-<!-- RESULTADOS -->
-
-<div class="resultados">
-
-<div class="stats-card">
-
-<div class="stats-number" id="statTotal">0</div>
-<div class="stats-label">Atendidas</div>
-
-</div>
-
-<div class="stats-card">
-
-<div class="stats-number" id="statRate">0%</div>
-<div class="stats-label">Taxa de desc.</div>
-
-</div>
-
-</div>
-
-
-<h3 style="margin-top:25px;">Histórico</h3>
-
-<div id="historyList"></div>
-
-</div>
-
-</div>
-
-<script type="module" src="firebase.js"></script>
-<script src="script.js"></script>
+  <script type="module" src="firebase.js"></script>
+  <script src="style.js"></script>
+  <script src="script.js"></script>
 
 </body>
 </html>
