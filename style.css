@@ -1,5 +1,8 @@
 *{
 box-sizing:border-box;
+-webkit-user-select: none; /* Safari */
+-ms-user-select: none;     /* IE */
+user-select: none;         /* padrão */
 }
 
 :root{
