@@ -48,6 +48,19 @@ service cloud.firestore {
         && request.resource.data.createdAt is string;
     }
 
+    function validLoginIndexCreate(matricula) {
+      return request.resource.data.keys().hasOnly([
+          "uid",
+          "matricula",
+          "email",
+          "createdAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.matricula == matricula
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt is string;
+    }
+
     function validUserTagUpdate() {
       return request.resource.data.diff(resource.data).changedKeys().hasOnly(["tag", "updatedAt"])
         && request.resource.data.uid == resource.data.uid
@@ -97,6 +110,12 @@ service cloud.firestore {
       allow read: if isOwnUser(uid) || isAdmin();
       allow update: if isAdmin() && validUserTagUpdate();
       allow delete: if false;
+    }
+
+    match /loginIndex/{matricula} {
+      allow read: if true;
+      allow create: if isSignedIn() && validLoginIndexCreate(matricula);
+      allow update, delete: if false;
     }
 
     match /registrosAtendimento/{registroId} {

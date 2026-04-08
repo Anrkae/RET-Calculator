@@ -34,7 +34,7 @@ function showAdminApp(profile) {
 
   const identity = document.getElementById("adminIdentity");
   if (identity) {
-    identity.textContent = `${profile.nome} • Matrícula ${profile.matricula} • Tag ${profile.tag}`;
+    identity.textContent = `${profile.nome} • Matrícula ${profile.matricula}`;
   }
 }
 

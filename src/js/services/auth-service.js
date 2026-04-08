@@ -11,12 +11,12 @@ import {
   getDocs,
   query,
   setDoc,
-  updateDoc,
-  where
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 
 const USERS_COLLECTION = "usuarios";
+const LOGIN_INDEX_COLLECTION = "loginIndex";
 const AUTH_DOMAIN = "ret-calculator.app";
 
 function normalizeMatricula(value) {
@@ -37,27 +37,6 @@ function waitForAuthState() {
   });
 }
 
-async function getUserByMatricula(matricula) {
-  const normalizedMatricula = normalizeMatricula(matricula);
-
-  if (!normalizedMatricula) return null;
-
-  const usersQuery = query(
-    collection(db, USERS_COLLECTION),
-    where("matricula", "==", normalizedMatricula)
-  );
-  const snapshot = await getDocs(usersQuery);
-
-  if (snapshot.empty) return null;
-
-  const userDoc = snapshot.docs[0];
-
-  return {
-    id: userDoc.id,
-    ...userDoc.data()
-  };
-}
-
 async function getUserProfileByUid(uid) {
   if (!uid) return null;
 
@@ -69,6 +48,30 @@ async function getUserProfileByUid(uid) {
     id: userDoc.id,
     ...userDoc.data()
   };
+}
+
+async function matriculaHasAccess(matricula) {
+  const normalizedMatricula = normalizeMatricula(matricula);
+
+  if (!normalizedMatricula) return false;
+
+  const loginIndexDoc = await getDoc(doc(db, LOGIN_INDEX_COLLECTION, normalizedMatricula));
+  return loginIndexDoc.exists();
+}
+
+async function ensureLoginIndex({ uid, matricula, email }) {
+  const normalizedMatricula = normalizeMatricula(matricula);
+
+  if (!uid || !normalizedMatricula) {
+    throw new Error("Não foi possível preparar o índice de login.");
+  }
+
+  await setDoc(doc(db, LOGIN_INDEX_COLLECTION, normalizedMatricula), {
+    uid,
+    matricula: normalizedMatricula,
+    email,
+    createdAt: new Date().toISOString()
+  });
 }
 
 async function registerOperator({ matricula, password, nome }) {
@@ -114,6 +117,7 @@ async function registerOperator({ matricula, password, nome }) {
   };
 
   await setDoc(doc(db, USERS_COLLECTION, credential.user.uid), profile);
+  await ensureLoginIndex(profile);
 
   return profile;
 }
@@ -139,7 +143,11 @@ async function loginOperator({ matricula, password }) {
       trimmedPassword
     );
   } catch (error) {
-    if (error?.code === "auth/invalid-credential" || error?.code === "auth/user-not-found" || error?.code === "auth/wrong-password") {
+    if (
+      error?.code === "auth/invalid-credential" ||
+      error?.code === "auth/user-not-found" ||
+      error?.code === "auth/wrong-password"
+    ) {
       throw new Error("Matrícula ou senha inválida.");
     }
 
@@ -192,11 +200,11 @@ async function updateUserTag(uid, tag) {
 
 export {
   buildSyntheticEmail,
-  getUserByMatricula,
   listUsers,
   loadCurrentProfile,
   loginOperator,
   logoutOperator,
+  matriculaHasAccess,
   registerOperator,
   updateUserTag
 };

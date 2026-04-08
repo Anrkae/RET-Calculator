@@ -1,10 +1,9 @@
 import {
   loadCurrentProfile,
   loginOperator,
+  matriculaHasAccess,
   registerOperator
 } from "../services/auth-service.js";
-import { auth } from "../services/firebase-config.js";
-import { fetchSignInMethodsForEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const authModes = {
   lookup: "lookup",
@@ -88,8 +87,8 @@ async function handleLookup() {
   input.value = matricula;
   setFeedback("");
 
-  const signInMethods = await fetchSignInMethodsForEmail(auth, `${matricula}@ret.local`);
-  setMode(signInMethods.length > 0 ? authModes.login : authModes.register);
+  const hasAccess = await matriculaHasAccess(matricula);
+  setMode(hasAccess ? authModes.login : authModes.register);
 }
 
 async function handleLogin() {
@@ -102,8 +101,7 @@ async function handleLogin() {
     });
 
     if (!result.exists) {
-      setFeedback("Essa matrícula ainda não possui acesso. Crie sua senha.", "error");
-      setMode(authModes.register);
+      setFeedback("Não foi possível carregar o perfil desse acesso.", "error");
       return;
     }
 
@@ -126,6 +124,12 @@ async function handleRegister() {
 
     redirectToDashboard();
   } catch (error) {
+    if (error.message === "Essa matrícula já possui acesso.") {
+      setFeedback("Essa matrícula já possui acesso. Digite a senha para entrar.", "error");
+      setMode(authModes.login);
+      return;
+    }
+
     setFeedback(error.message || "Não foi possível criar o acesso.", "error");
   }
 }

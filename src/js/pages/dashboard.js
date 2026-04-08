@@ -24,7 +24,7 @@ function getOperatorDisplayName() {
 function getOperatorInfoLabel() {
   if (!currentProfile) return "";
 
-  return `Operador: ${getOperatorDisplayName()} • Matrícula ${currentProfile.matricula} • Tag ${currentProfile.tag}`;
+  return `Operador: ${getOperatorDisplayName()} • Matrícula ${currentProfile.matricula}`;
 }
 
 function renderOperatorInfo() {
