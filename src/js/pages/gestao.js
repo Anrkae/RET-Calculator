@@ -1,15 +1,16 @@
 import { listarLigacoes } from "../services/atendimentos-service.js";
-import {
-  loadCurrentProfile,
-  loginOperator,
-  logoutOperator,
-  searchUserByMatricula,
-  updateUserTag
-} from "../services/auth-service.js";
+import * as authService from "../services/auth-service.js";
 
 let dadosBrutos = [];
 let currentProfile = null;
 let selectedUser = null;
+
+const {
+  loadCurrentProfile,
+  loginOperator,
+  logoutOperator,
+  updateUserTag
+} = authService;
 
 function normalizeMatricula(value) {
   return String(value || "").replace(/\D/g, "").trim();
@@ -196,7 +197,9 @@ async function handleSearchUser() {
   }
 
   try {
-    const user = await searchUserByMatricula(matricula);
+    const user = authService.searchUserByMatricula
+      ? await authService.searchUserByMatricula(matricula)
+      : await fallbackSearchUserByMatricula(matricula);
 
     if (!user) {
       setSearchFeedback("Não encontrei um colaborador com esse Almope.", "error");
@@ -211,6 +214,15 @@ async function handleSearchUser() {
     console.error("Erro ao buscar colaborador:", error);
     setSearchFeedback(error.message || "Não foi possível buscar esse colaborador agora.", "error");
   }
+}
+
+async function fallbackSearchUserByMatricula(matricula) {
+  if (!authService.listUsers) {
+    throw new Error("A busca de colaborador ainda não está disponível nesta versão carregada.");
+  }
+
+  const users = await authService.listUsers();
+  return users.find((user) => String(user.matricula || "").trim() === matricula) || null;
 }
 
 async function handleSaveSelectedUser() {
