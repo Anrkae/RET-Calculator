@@ -211,7 +211,7 @@ async function handleAdminLogin() {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setAuthFeedback("Essa matrícula ainda não possui acesso.", "error");
+      setAuthFeedback("Não encontrei um acesso ativo para essa matrícula.", "error");
       return;
     }
 
@@ -219,7 +219,7 @@ async function handleAdminLogin() {
 
     if (refreshedProfile?.tag !== "adm") {
       await logoutOperator();
-      setAuthFeedback("Acesso negado. Somente usuários com tag adm podem entrar.", "error");
+      setAuthFeedback("Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
       return;
     }
 
@@ -243,7 +243,7 @@ async function initializeAdmin() {
   if (currentProfile.tag !== "adm") {
     await logoutOperator();
     showLogin();
-    setAuthFeedback("Acesso negado. Somente usuários com tag adm podem entrar.", "error");
+    setAuthFeedback("Seu acesso não tem permissão para abrir esta área administrativa.", "error");
     return;
   }
 

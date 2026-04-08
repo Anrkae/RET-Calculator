@@ -70,6 +70,37 @@ margin-bottom:8px;
 #loginScreen{
 max-width:420px;
 margin-top:40px;
+padding:30px 28px 24px;
+position:relative;
+overflow:hidden;
+}
+
+#loginScreen::before{
+content:"";
+position:absolute;
+inset:-60px auto auto -20px;
+width:180px;
+height:180px;
+background:radial-gradient(circle, rgba(230,0,0,0.22) 0%, rgba(230,0,0,0) 72%);
+pointer-events:none;
+}
+
+.auth-kicker{
+display:inline-flex;
+align-items:center;
+gap:8px;
+padding:7px 12px;
+border-radius:999px;
+background:rgba(230,0,0,0.12);
+border:1px solid rgba(230,0,0,0.18);
+color:#ffd0d0;
+font-size:12px;
+font-weight:700;
+letter-spacing:.08em;
+text-transform:uppercase;
+margin-bottom:14px;
+position:relative;
+z-index:1;
 }
 
 .auth-subtitle{
@@ -77,6 +108,8 @@ margin:-6px 0 18px;
 color:var(--muted);
 font-size:14px;
 line-height:1.5;
+position:relative;
+z-index:1;
 }
 
 .auth-feedback{
@@ -88,6 +121,8 @@ line-height:1.4;
 background:rgba(255,255,255,0.06);
 border:1px solid rgba(255,255,255,0.08);
 color:var(--text);
+position:relative;
+z-index:1;
 }
 
 .auth-feedback[data-type="error"]{
@@ -108,6 +143,8 @@ margin-bottom:18px;
 font-weight:700;
 font-size:28px;
 letter-spacing:-0.02em;
+position:relative;
+z-index:1;
 }
 
 h3{
@@ -130,7 +167,7 @@ color:var(--muted);
 input{
 width:100%;
 padding:12px 14px;
-margin-bottom:12px;
+margin-bottom:14px;
 border-radius:10px;
 border:1px solid var(--line);
 background:#1c1c1c;
@@ -144,6 +181,34 @@ input:focus{
 border-color:var(--primary);
 box-shadow:0 0 0 3px rgba(230,0,0,0.18);
 transform:translateY(-1px);
+}
+
+.auth-form{
+position:relative;
+z-index:1;
+display:flex;
+flex-direction:column;
+gap:2px;
+margin-bottom:4px;
+}
+
+.auth-label{
+display:block;
+font-size:12px;
+font-weight:700;
+letter-spacing:.04em;
+text-transform:uppercase;
+color:rgba(255,255,255,0.58);
+margin:2px 0 6px;
+}
+
+.auth-note{
+margin:14px 0 0;
+font-size:12px;
+line-height:1.5;
+color:rgba(255,255,255,0.58);
+position:relative;
+z-index:1;
 }
 
 /* BOTÕES */
@@ -160,6 +225,8 @@ position:relative;
 overflow:hidden;
 font-size:14px;
 transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease, background .18s ease;
+position:relative;
+z-index:1;
 }
 
 button:hover{
@@ -194,6 +261,16 @@ background:rgba(255,255,255,0.06);
 color:white;
 border:1px solid rgba(255,255,255,0.08);
 box-shadow:none;
+}
+
+#loginScreen .primary,
+#loginScreen .ghost{
+width:100%;
+}
+
+#loginScreen .ghost{
+margin-top:8px;
+padding:11px 14px;
 }
 
 .ghost:hover{

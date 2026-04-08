@@ -39,14 +39,18 @@ function setMode(mode) {
   const continueButton = document.getElementById("continueButton");
   const backButton = document.getElementById("backButton");
   const nameInput = document.getElementById("nameInput");
+  const nameLabel = document.getElementById("nameLabel");
   const passwordInput = document.getElementById("passwordInput");
+  const passwordLabel = document.getElementById("passwordLabel");
 
-  if (!subtitle || !continueButton || !backButton || !nameInput || !passwordInput) {
+  if (!subtitle || !continueButton || !backButton || !nameInput || !nameLabel || !passwordInput || !passwordLabel) {
     return;
   }
 
   nameInput.classList.add("hidden");
+  nameLabel.classList.add("hidden");
   passwordInput.classList.add("hidden");
+  passwordLabel.classList.add("hidden");
   backButton.classList.toggle("hidden", mode === authModes.lookup);
 
   if (mode === authModes.lookup) {
@@ -58,19 +62,24 @@ function setMode(mode) {
   }
 
   if (mode === authModes.login) {
-    subtitle.textContent = "Matrícula encontrada. Digite sua senha para entrar.";
+    subtitle.textContent = "Já encontramos seu acesso. Agora é só digitar sua senha.";
     continueButton.textContent = "Entrar";
+    passwordLabel.classList.remove("hidden");
     passwordInput.classList.remove("hidden");
     passwordInput.autocomplete = "current-password";
+    passwordInput.placeholder = "Digite sua senha";
     passwordInput.focus();
     return;
   }
 
-  subtitle.textContent = "Primeiro acesso. Defina seu nome e crie sua senha.";
+  subtitle.textContent = "Esse parece ser seu primeiro acesso. Preencha seus dados para continuar.";
   continueButton.textContent = "Criar acesso";
+  nameLabel.classList.remove("hidden");
   nameInput.classList.remove("hidden");
+  passwordLabel.classList.remove("hidden");
   passwordInput.classList.remove("hidden");
   passwordInput.autocomplete = "new-password";
+  passwordInput.placeholder = "Crie uma senha com pelo menos 6 caracteres";
   nameInput.focus();
 }
 
@@ -79,7 +88,7 @@ async function handleLookup() {
   const matricula = normalizeMatricula(input?.value);
 
   if (!matricula) {
-    setFeedback("Digite a matrícula para continuar.", "error");
+    setFeedback("Informe sua matrícula para eu continuar com o acesso.", "error");
     return;
   }
 
@@ -101,7 +110,7 @@ async function handleLogin() {
     });
 
     if (!result.exists) {
-      setFeedback("Não foi possível carregar o perfil desse acesso.", "error");
+      setFeedback("Seu acesso foi encontrado, mas não consegui carregar o perfil. Tente novamente em alguns instantes.", "error");
       return;
     }
 
@@ -125,12 +134,12 @@ async function handleRegister() {
     redirectToDashboard();
   } catch (error) {
     if (error.message === "Essa matrícula já possui acesso.") {
-      setFeedback("Essa matrícula já possui acesso. Digite a senha para entrar.", "error");
+      setFeedback("Essa matrícula já possui acesso. Digite sua senha para entrar.", "error");
       setMode(authModes.login);
       return;
     }
 
-    setFeedback(error.message || "Não foi possível criar o acesso.", "error");
+    setFeedback(error.message || "Não consegui criar seu acesso agora. Tente novamente.", "error");
   }
 }
 

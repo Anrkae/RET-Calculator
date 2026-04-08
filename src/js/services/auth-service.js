@@ -80,15 +80,15 @@ async function registerOperator({ matricula, password, nome }) {
   const trimmedPassword = String(password || "").trim();
 
   if (!normalizedMatricula) {
-    throw new Error("Digite a matrícula.");
+    throw new Error("Digite sua matrícula para continuar.");
   }
 
   if (!trimmedName) {
-    throw new Error("Digite o nome do operador.");
+    throw new Error("Falta informar o nome do operador.");
   }
 
   if (trimmedPassword.length < 6) {
-    throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+    throw new Error("Crie uma senha com pelo menos 6 caracteres.");
   }
 
   let credential;
@@ -127,11 +127,11 @@ async function loginOperator({ matricula, password }) {
   const trimmedPassword = String(password || "").trim();
 
   if (!normalizedMatricula) {
-    throw new Error("Digite a matrícula.");
+    throw new Error("Digite sua matrícula para continuar.");
   }
 
   if (!trimmedPassword) {
-    throw new Error("Digite a senha.");
+    throw new Error("Digite sua senha para entrar.");
   }
 
   let credential;
@@ -148,7 +148,7 @@ async function loginOperator({ matricula, password }) {
       error?.code === "auth/user-not-found" ||
       error?.code === "auth/wrong-password"
     ) {
-      throw new Error("Matrícula ou senha inválida.");
+      throw new Error("Não consegui entrar com esses dados. Confira matrícula e senha.");
     }
 
     throw error;
@@ -185,11 +185,11 @@ async function listUsers() {
 
 async function updateUserTag(uid, tag) {
   if (!uid) {
-    throw new Error("Usuário inválido.");
+    throw new Error("Não consegui identificar o usuário que será atualizado.");
   }
 
   if (!["cr", "adm"].includes(tag)) {
-    throw new Error("Tag inválida.");
+    throw new Error("A tag informada é inválida.");
   }
 
   await updateDoc(doc(db, USERS_COLLECTION, uid), {

@@ -9,16 +9,25 @@
 </head>
 <body>
   <div id="loginScreen" class="card fade-up">
+    <span class="auth-kicker">RET Calculator</span>
     <h2>Acesso do Operador</h2>
     <p id="authSubtitle" class="auth-subtitle">Digite sua matrícula para continuar.</p>
     <p id="authFeedback" class="auth-feedback hidden"></p>
 
-    <input id="matriculaInput" placeholder="Matrícula" autocomplete="username" inputmode="numeric">
-    <input id="nameInput" class="hidden" placeholder="Nome do operador" autocomplete="name">
-    <input id="passwordInput" class="hidden" type="password" placeholder="Senha" autocomplete="current-password">
+    <div class="auth-form">
+      <label class="auth-label" for="matriculaInput">Matrícula</label>
+      <input id="matriculaInput" placeholder="Ex.: 12345" autocomplete="username" inputmode="numeric">
+
+      <label class="auth-label hidden" id="nameLabel" for="nameInput">Nome do operador</label>
+      <input id="nameInput" class="hidden" placeholder="Como você quer aparecer no painel" autocomplete="name">
+
+      <label class="auth-label hidden" id="passwordLabel" for="passwordInput">Senha</label>
+      <input id="passwordInput" class="hidden" type="password" placeholder="Digite sua senha" autocomplete="current-password">
+    </div>
 
     <button id="continueButton" class="primary" type="button">Continuar</button>
     <button id="backButton" class="ghost hidden" type="button">Voltar</button>
+    <p class="auth-note">No primeiro acesso, vamos pedir seu nome e criar sua senha.</p>
   </div>
 
   <script src="./src/js/ui/animations.js"></script>
