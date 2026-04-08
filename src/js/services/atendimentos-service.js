@@ -1,15 +1,15 @@
 import {
   addDoc,
   collection,
-  collectionGroup,
-  doc,
   getDocs,
-  query
+  query,
+  where
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
 const CANCELAMENTO_WEBHOOK_URL =
   "https://gleefully-canelike-shaun.ngrok-free.dev/webhook/cancelamento-whatsapp";
+const REGISTROS_COLLECTION = "registrosAtendimento";
 
 function getTodayId() {
   const now = new Date();
@@ -41,9 +41,7 @@ function parseStoredDate(value) {
 
 async function salvarAtendimento(matricula, data) {
   const todayId = getTodayId();
-  const dayDoc = doc(db, "atendimentos", todayId);
-  const operadorDoc = doc(dayDoc, "operadores", matricula);
-  const ligacoes = collection(operadorDoc, "ligacoes");
+  const registros = collection(db, REGISTROS_COLLECTION);
 
   const atendimento = {
     ...data,
@@ -52,7 +50,7 @@ async function salvarAtendimento(matricula, data) {
     whatsappSent: false
   };
 
-  await addDoc(ligacoes, atendimento);
+  await addDoc(registros, atendimento);
 
   if (data.result === "Cancelado") {
     try {
@@ -77,16 +75,18 @@ async function salvarAtendimento(matricula, data) {
 
 async function buscarLigacoes(matricula) {
   const todayId = getTodayId();
-  const dayDoc = doc(db, "atendimentos", todayId);
-  const operadorDoc = doc(dayDoc, "operadores", matricula);
-  const ligacoes = collection(operadorDoc, "ligacoes");
-  const snapshot = await getDocs(ligacoes);
+  const ligacoesQuery = query(
+    collection(db, REGISTROS_COLLECTION),
+    where("operator", "==", matricula),
+    where("dayId", "==", todayId)
+  );
+  const snapshot = await getDocs(ligacoesQuery);
 
   return snapshot.docs.map((snapshotDoc) => snapshotDoc.data());
 }
 
 async function listarLigacoes() {
-  const ligacoesQuery = query(collectionGroup(db, "ligacoes"));
+  const ligacoesQuery = query(collection(db, REGISTROS_COLLECTION));
   const snapshot = await getDocs(ligacoesQuery);
 
   return snapshot.docs.map((snapshotDoc) => {

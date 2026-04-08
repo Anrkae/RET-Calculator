@@ -1,0 +1,11 @@
+{
+  "name": "ret-calculator-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate:estrutura": "node scripts/migrate-estrutura-atendimentos.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}
