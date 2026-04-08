@@ -18,6 +18,8 @@ box-sizing:border-box;
 }
 
 html, body{
+width:100%;
+height:100%;
 scroll-behavior:smooth;
 }
 
@@ -30,7 +32,9 @@ padding:6px;
 display:flex;
 flex-direction:column;
 gap:6px;
+overflow-x:hidden;
 overflow-y:auto;
+overscroll-behavior:none;
 }
 
 #statusTitle{

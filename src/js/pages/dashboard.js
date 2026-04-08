@@ -432,8 +432,8 @@ return
 }
 
 pipWindow = await window.documentPictureInPicture.requestWindow({
-width: 340,
-height: 430
+width: 228,
+height: 168
 })
 
 pipWindow.addEventListener("pagehide", () => {
