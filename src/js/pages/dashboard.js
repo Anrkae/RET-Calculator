@@ -177,14 +177,14 @@ function buildDemandMessage(payload) {
   const operatorName = getOperatorDisplayName();
 
   if (payload.demandType === "encaixe-vt") {
-    return `📌 *Encaixe VT*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*\n👨🏾‍🔧 *${payload.area}* - *${payload.classe}*`;
+    return `📌 *${operatorName}* - *Encaixe VT*\n\n📄 *${payload.contract}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*\n👨🏾‍🔧 *${payload.area}* - *${payload.classe}*`;
   }
 
   if (payload.demandType === "retirar-ponto") {
-    return `📌 *Retirar Ponto Virtua*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*\n🔢 *Ponto ${payload.point}*`;
+    return `📌 *${operatorName}* - *Retirar Ponto Virtua*\n\n📄 *${payload.contract}*\n🔢 *Ponto ${payload.point}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*`;
   }
 
-  return `📌 *Suspensão Temporária*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n⏸️ *${payload.suspensionItems.join(", ")}*`;
+  return `📌 *${operatorName}* - *Suspensão Temporária:* *(${payload.suspensionItems.join(" e ")})*\n\n📄 *${payload.contract}*`;
 }
 
 function collectDemandPayload() {
