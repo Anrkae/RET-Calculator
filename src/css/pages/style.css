@@ -134,7 +134,14 @@ margin-top:6px;
 }
 
 .dashboard-actions button{
-flex:1 1 200px;
+flex:1 1 auto;
+max-width:240px;
+}
+
+.dashboard-secondary-actions{
+display:flex;
+justify-content:flex-end;
+margin-top:12px;
 }
 
 .action-button{
@@ -967,6 +974,14 @@ width:100%;
 
 .dashboard-actions{
 flex-direction:column;
+}
+
+.dashboard-secondary-actions{
+justify-content:stretch;
+}
+
+.dashboard-secondary-actions .action-button{
+width:100%;
 }
 
 .demand-grid,
