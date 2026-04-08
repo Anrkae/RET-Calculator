@@ -39,13 +39,20 @@ function parseStoredDate(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-async function salvarAtendimento(matricula, data) {
+async function salvarAtendimento(profile, data) {
+  if (!profile?.uid || !profile?.matricula) {
+    throw new Error("Perfil do operador inválido.");
+  }
+
   const todayId = getTodayId();
   const registros = collection(db, REGISTROS_COLLECTION);
 
   const atendimento = {
     ...data,
-    operator: matricula,
+    uid: profile.uid,
+    operator: profile.matricula,
+    operatorName: profile.nome,
+    operatorTag: profile.tag,
     dayId: todayId,
     whatsappSent: false
   };
@@ -61,6 +68,8 @@ async function salvarAtendimento(matricula, data) {
         },
         body: JSON.stringify({
           operator: atendimento.operator,
+          operatorName: atendimento.operatorName,
+          operatorTag: atendimento.operatorTag,
           cancelCountOfDay: atendimento.cancelCountOfDay,
           reason: atendimento.reason,
           duration: atendimento.duration,
@@ -73,11 +82,13 @@ async function salvarAtendimento(matricula, data) {
   }
 }
 
-async function buscarLigacoes(matricula) {
+async function buscarLigacoes(profile) {
+  if (!profile?.uid) return [];
+
   const todayId = getTodayId();
   const ligacoesQuery = query(
     collection(db, REGISTROS_COLLECTION),
-    where("operator", "==", matricula),
+    where("uid", "==", profile.uid),
     where("dayId", "==", todayId)
   );
   const snapshot = await getDocs(ligacoesQuery);

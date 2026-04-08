@@ -1,43 +1,93 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Resultados - Claro Ret</title>
-    <link rel="stylesheet" href="../src/css/pages/gestao.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Resultados - Claro Ret</title>
+  <link rel="stylesheet" href="../src/css/pages/gestao.css">
 </head>
 <body class="dark-theme">
-    <div class="container">
-        <header>
-            <div>
-                <h1>Gestão de Operadores</h1>
-                <p id="periodLabel">Exibindo resultados deste mês</p>
-            </div>
-            <div class="filter-area">
-                <select id="periodFilter">
-                    <option value="diario">Diário (Hoje)</option>
-                    <option value="semanal">Semanal (Mês atual)</option>
-                    <option value="mensal" selected>Mensal (Mês atual)</option>
-                </select>
-            </div>
-        </header>
+  <div id="adminLogin" class="auth-shell">
+    <div class="auth-card">
+      <h1>Acesso administrativo</h1>
+      <p class="auth-copy">Entre com matrícula e senha. Somente usuários com tag adm podem acessar esta página.</p>
+      <p id="adminAuthFeedback" class="auth-feedback hidden"></p>
 
-        <div class="table-container">
-            <table id="resultsTable">
-                <thead>
-                    <tr>
-                        <th>Operador</th>
-                        <th>Atendidas</th>
-                        <th>Cancelamentos</th>
-                        <th>Taxa de Desconexão</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                </tbody>
-            </table>
-        </div>
+      <input id="adminMatriculaInput" type="text" placeholder="Matrícula" autocomplete="username" inputmode="numeric">
+      <input id="adminPasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
+
+      <button id="adminLoginButton" class="primary-button" type="button">Entrar</button>
+      <a class="auth-back-link" href="../index.html">Voltar para o login do operador</a>
     </div>
-    <script type="module" src="../src/js/pages/gestao.js"></script>
+  </div>
+
+  <div id="adminApp" class="container hidden">
+    <header class="page-header">
+      <div>
+        <h1>Gestão de Operadores</h1>
+        <p id="periodLabel">Exibindo resultados deste mês</p>
+      </div>
+
+      <div class="header-actions">
+        <select id="periodFilter">
+          <option value="diario">Diário (Hoje)</option>
+          <option value="semanal">Semanal (Mês atual)</option>
+          <option value="mensal" selected>Mensal (Mês atual)</option>
+        </select>
+        <button id="adminLogoutButton" class="ghost-button" type="button">Sair</button>
+      </div>
+    </header>
+
+    <section class="summary-card">
+      <strong id="adminIdentity"></strong>
+      <span>Usuários com tag adm podem promover ou rebaixar acessos abaixo.</span>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Resultados</h2>
+        <span>Visão consolidada dos atendimentos registrados.</span>
+      </div>
+
+      <div class="table-container">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th>Operador</th>
+              <th>Atendidas</th>
+              <th>Cancelamentos</th>
+              <th>Taxa de Desconexão</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Acessos</h2>
+        <span>Tag adm só pode ser aplicada por um administrador autenticado.</span>
+      </div>
+
+      <p id="usersFeedback" class="auth-feedback hidden"></p>
+
+      <div class="table-container">
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>Matrícula</th>
+              <th>Nome</th>
+              <th>Tag</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="../src/js/pages/gestao.js"></script>
 </body>
 </html>

@@ -9,12 +9,19 @@
 </head>
 <body>
   <div id="loginScreen" class="card fade-up">
-    <h2>Login</h2>
-    <input id="matriculaInput" placeholder="Matrícula" autocomplete="username">
-    <button id="loginButton" class="primary" type="button">Entrar</button>
+    <h2>Acesso do Operador</h2>
+    <p id="authSubtitle" class="auth-subtitle">Digite sua matrícula para continuar.</p>
+    <p id="authFeedback" class="auth-feedback hidden"></p>
+
+    <input id="matriculaInput" placeholder="Matrícula" autocomplete="username" inputmode="numeric">
+    <input id="nameInput" class="hidden" placeholder="Nome do operador" autocomplete="name">
+    <input id="passwordInput" class="hidden" type="password" placeholder="Senha" autocomplete="current-password">
+
+    <button id="continueButton" class="primary" type="button">Continuar</button>
+    <button id="backButton" class="ghost hidden" type="button">Voltar</button>
   </div>
 
   <script src="./src/js/ui/animations.js"></script>
-  <script src="./src/js/pages/login.js"></script>
+  <script type="module" src="./src/js/pages/login.js"></script>
 </body>
 </html>

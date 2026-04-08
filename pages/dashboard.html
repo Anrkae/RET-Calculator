@@ -8,25 +8,17 @@
   <link rel="stylesheet" href="../src/css/pages/style.css">
 </head>
 <body>
-  <div id="loginScreen" class="card fade-up hidden">
-    <h2>Login</h2>
-    <input id="matriculaInput" placeholder="Matrícula">
-    <button class="primary" onclick="login()">
-      Entrar
-    </button>
-  </div>
-
   <div id="dashboard" class="hidden">
     <div class="card fade-up">
       <div class="card-toolbar">
-        <button class="ghost logout-button" type="button" onclick="openLogoutModal()">Sair</button>
+        <button id="logoutButton" class="ghost logout-button" type="button">Sair</button>
       </div>
 
       <h2>Painel</h2>
 
       <div id="operatorInfo"></div>
 
-      <button class="primary" onclick="openFloatingPanel()">
+      <button id="openPipButton" class="primary" type="button">
         Abrir painel
       </button>
 
@@ -46,11 +38,7 @@
         <div class="history-header">
           <h3>Histórico de atendimentos</h3>
 
-          <button
-            id="toggleHistoryBtn"
-            class="ghost hidden"
-            type="button"
-            onclick="toggleHistory()">
+          <button id="toggleHistoryBtn" class="ghost hidden" type="button">
             <span class="toggle-history-icon" aria-hidden="true">
               <span class="toggle-history-bar toggle-history-bar-a"></span>
               <span class="toggle-history-bar toggle-history-bar-b"></span>
@@ -75,9 +63,8 @@
     </div>
   </div>
 
-  <script type="module" src="../src/js/pages/firebase.js"></script>
   <script src="../src/js/ui/pip-snippet.js"></script>
   <script src="../src/js/ui/animations.js"></script>
-  <script src="../src/js/pages/dashboard.js"></script>
+  <script type="module" src="../src/js/pages/dashboard.js"></script>
 </body>
 </html>

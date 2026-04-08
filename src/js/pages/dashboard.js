@@ -1,812 +1,641 @@
-﻿let pipWindow = null
-let callInterval = null
-let seconds = 0
+import {
+  buscarLigacoes,
+  salvarAtendimento
+} from "../services/atendimentos-service.js";
+import {
+  loadCurrentProfile,
+  logoutOperator
+} from "../services/auth-service.js";
 
-let selectedResult = null
-let history = []
+let pipWindow = null;
+let callInterval = null;
+let seconds = 0;
 
-let matricula = null
-let historyExpanded = false
-let historyAnimation = null
+let selectedResult = null;
+let history = [];
+let currentProfile = null;
+let historyExpanded = false;
+let historyAnimation = null;
 
-
-/* LOGIN */
-
-async function login() {
-
-const input = document.getElementById("matriculaInput")
-
-if (!input.value.trim()) {
-alert("Digite a matrícula")
-return
+function getOperatorDisplayName() {
+  return currentProfile?.nome || currentProfile?.matricula || "";
 }
 
-matricula = input.value.trim()
+function getOperatorInfoLabel() {
+  if (!currentProfile) return "";
 
-loginScreen.classList.add("hidden")
-dashboard.classList.remove("hidden")
-
-document.getElementById("operatorInfo").innerText =
-"Operador: " + matricula
-
-
-/* BUSCAR LIGAÇÕES DO DIA */
-
-if (window.buscarLigacoes) {
-
-const ligacoes = await buscarLigacoes(matricula)
-
-history = []
-
-ligacoes.forEach(l => history.push(l))
-
-history.sort((a, b) => b.timestamp - a.timestamp)
-
-renderHistory()
-
+  return `Operador: ${getOperatorDisplayName()} • Matrícula ${currentProfile.matricula} • Tag ${currentProfile.tag}`;
 }
 
+function renderOperatorInfo() {
+  const operatorInfo = document.getElementById("operatorInfo");
+
+  if (!operatorInfo) return;
+
+  operatorInfo.textContent = getOperatorInfoLabel();
 }
-
-
-/* HISTÓRICO */
 
 function renderHistory() {
+  const historyList = document.getElementById("historyList");
+  const toggleBtn = document.getElementById("toggleHistoryBtn");
 
-const historyList = document.getElementById("historyList")
-const toggleBtn = document.getElementById("toggleHistoryBtn")
+  if (!historyList) return;
 
-if (!historyList) return
+  historyList.innerHTML = "";
 
-historyList.innerHTML = ""
+  if (!history || history.length === 0) {
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `
+      <strong>Nenhum atendimento encontrado</strong>
+      <small>Quando houver registros, eles aparecerão aqui.</small>
+    `;
+    historyList.appendChild(div);
 
-if (!history || history.length === 0) {
+    if (toggleBtn) {
+      toggleBtn.classList.add("hidden");
+      toggleBtn.classList.remove("expanded");
+      toggleBtn.setAttribute("aria-label", "Expandir histórico");
+    }
 
-const div = document.createElement("div")
-div.className = "history-item"
-div.innerHTML = `
-<strong>Nenhum atendimento encontrado</strong>
-<small>Quando houver registros, eles aparecerão aqui.</small>
-`
-historyList.appendChild(div)
+    historyExpanded = false;
+    applyHistoryState();
+    updateStats();
+    return;
+  }
 
-if (toggleBtn) {
-toggleBtn.classList.add("hidden")
-toggleBtn.classList.remove("expanded")
-toggleBtn.setAttribute("aria-label", "Expandir histórico")
-}
+  history.forEach((item) => {
+    const div = document.createElement("div");
+    let statusClass = "";
 
-historyExpanded = false
-applyHistoryState()
+    if (item.result === "Retido") {
+      statusClass = "retido";
+    } else if (item.result === "Cancelado") {
+      statusClass = "cancelado";
+    }
 
-updateStats()
-return
-}
+    div.className = `history-item ${statusClass}`.trim();
+    div.innerHTML = `<strong>${item.result}</strong>
+      ${item.reason ? ` • ${item.reason}` : ""}
+      <br><small>${item.duration} • ${item.date} ${item.time}</small>`;
 
-history.forEach(item => {
+    historyList.appendChild(div);
+  });
 
-const div = document.createElement("div")
+  if (toggleBtn) {
+    if (history.length > 2) {
+      toggleBtn.classList.remove("hidden");
+      toggleBtn.classList.toggle("expanded", historyExpanded);
+      toggleBtn.setAttribute("aria-label", historyExpanded ? "Minimizar histórico" : "Expandir histórico");
+    } else {
+      toggleBtn.classList.add("hidden");
+      toggleBtn.classList.remove("expanded");
+      toggleBtn.setAttribute("aria-label", "Expandir histórico");
+      historyExpanded = false;
+    }
+  }
 
-let statusClass = ""
-
-if (item.result === "Retido") {
-statusClass = "retido"
-} else if (item.result === "Cancelado") {
-statusClass = "cancelado"
-}
-
-div.className = `history-item ${statusClass}`.trim()
-
-div.innerHTML =
-`<strong>${item.result}</strong>
-${item.reason ? " • " + item.reason : ""}
-<br><small>${item.duration} • ${item.date} ${item.time}</small>`
-
-historyList.appendChild(div)
-
-})
-
-if (toggleBtn) {
-if (history.length > 2) {
-toggleBtn.classList.remove("hidden")
-toggleBtn.classList.toggle("expanded", historyExpanded)
-toggleBtn.setAttribute("aria-label", historyExpanded ? "Minimizar histórico" : "Expandir histórico")
-} else {
-toggleBtn.classList.add("hidden")
-toggleBtn.classList.remove("expanded")
-toggleBtn.setAttribute("aria-label", "Expandir histórico")
-historyExpanded = false
-}
-}
-
-applyHistoryState()
-updateStats()
-
+  applyHistoryState();
+  updateStats();
 }
 
 function getHistoryGap() {
-const historyList = document.getElementById("historyList")
-if (!historyList) return 0
+  const historyList = document.getElementById("historyList");
+  if (!historyList) return 0;
 
-const styles = window.getComputedStyle(historyList)
-const gap = parseFloat(styles.rowGap || styles.gap || "0")
-return isNaN(gap) ? 0 : gap
+  const styles = window.getComputedStyle(historyList);
+  const gap = parseFloat(styles.rowGap || styles.gap || "0");
+  return Number.isNaN(gap) ? 0 : gap;
 }
 
 function getCollapsedHistoryHeight() {
-const historyList = document.getElementById("historyList")
-if (!historyList) return 0
+  const historyList = document.getElementById("historyList");
+  if (!historyList) return 0;
 
-const cards = historyList.querySelectorAll(".history-item")
-if (cards.length === 0) return 0
-if (cards.length === 1) return Math.ceil(cards[0].offsetHeight)
+  const cards = historyList.querySelectorAll(".history-item");
+  if (cards.length === 0) return 0;
+  if (cards.length === 1) return Math.ceil(cards[0].offsetHeight);
 
-const gap = getHistoryGap()
-return Math.ceil(cards[0].offsetHeight + cards[1].offsetHeight + gap)
-}
-
-function getExpandedHistoryHeight() {
-const historyList = document.getElementById("historyList")
-if (!historyList) return 0
-
-return Math.ceil(historyList.scrollHeight)
+  const gap = getHistoryGap();
+  return Math.ceil(cards[0].offsetHeight + cards[1].offsetHeight + gap);
 }
 
 function syncHistoryButtonState(isExpanded) {
-const toggleBtn = document.getElementById("toggleHistoryBtn")
-if (!toggleBtn) return
+  const toggleBtn = document.getElementById("toggleHistoryBtn");
+  if (!toggleBtn) return;
 
-toggleBtn.classList.toggle("expanded", isExpanded)
-toggleBtn.setAttribute("aria-label", isExpanded ? "Minimizar histórico" : "Expandir histórico")
-}
-
-function animateHistoryHeight(historyList, targetHeight) {
-const startHeight = Math.ceil(historyList.getBoundingClientRect().height)
-const endHeight = Math.max(targetHeight, 0)
-
-if (historyAnimation) {
-historyAnimation.cancel()
-historyAnimation = null
-}
-
-historyList.style.height = startHeight + "px"
-historyList.style.overflow = "hidden"
-
-if (startHeight === endHeight) {
-historyList.style.height = endHeight + "px"
-return
-}
-
-historyAnimation = historyList.animate(
-[
-{ height: startHeight + "px" },
-{ height: endHeight + "px" }
-],
-{
-duration: 320,
-easing: "cubic-bezier(.22,1,.36,1)",
-fill: "forwards"
-}
-)
-
-historyAnimation.onfinish = () => {
-historyList.style.height = endHeight + "px"
-historyAnimation = null
-}
-
-historyAnimation.oncancel = () => {
-historyAnimation = null
-}
+  toggleBtn.classList.toggle("expanded", isExpanded);
+  toggleBtn.setAttribute("aria-label", isExpanded ? "Minimizar histórico" : "Expandir histórico");
 }
 
 function applyHistoryState(animate = false) {
-const historyList = document.getElementById("historyList")
-const toggleBtn = document.getElementById("toggleHistoryBtn")
+  const historyList = document.getElementById("historyList");
+  const toggleBtn = document.getElementById("toggleHistoryBtn");
 
-if (!historyList) return
+  if (!historyList) return;
 
-const needsCollapse = history.length > 2
+  const needsCollapse = history.length > 2;
 
-historyList.classList.remove("collapsed", "expanded")
+  historyList.classList.remove("collapsed", "expanded");
 
-if (!needsCollapse) {
-historyList.classList.add("expanded")
-historyList.style.height = historyList.scrollHeight + "px"
+  if (!needsCollapse) {
+    historyList.classList.add("expanded");
+    historyList.style.height = `${historyList.scrollHeight}px`;
 
-if (toggleBtn) {
-toggleBtn.classList.remove("expanded")
-toggleBtn.setAttribute("aria-label", "Expandir histórico")
-}
+    if (toggleBtn) {
+      toggleBtn.classList.remove("expanded");
+      toggleBtn.setAttribute("aria-label", "Expandir histórico");
+    }
 
-return
-}
+    return;
+  }
 
-if (historyExpanded) {
-historyList.classList.add("expanded")
+  if (historyExpanded) {
+    historyList.classList.add("expanded");
 
-if (animate) {
-const startHeight = historyList.offsetHeight
-historyList.style.height = startHeight + "px"
+    if (animate) {
+      const startHeight = historyList.offsetHeight;
+      historyList.style.height = `${startHeight}px`;
 
-requestAnimationFrame(() => {
-historyList.style.height = historyList.scrollHeight + "px"
-})
-} else {
-historyList.style.height = historyList.scrollHeight + "px"
-}
+      requestAnimationFrame(() => {
+        historyList.style.height = `${historyList.scrollHeight}px`;
+      });
+    } else {
+      historyList.style.height = `${historyList.scrollHeight}px`;
+    }
 
-if (toggleBtn) {
-toggleBtn.classList.add("expanded")
-toggleBtn.setAttribute("aria-label", "Minimizar histórico")
-}
-} else {
-historyList.classList.add("collapsed")
-
-const collapsedHeight = getCollapsedHistoryHeight()
-historyList.style.height = collapsedHeight + "px"
-
-if (toggleBtn) {
-toggleBtn.classList.remove("expanded")
-toggleBtn.setAttribute("aria-label", "Expandir histórico")
-}
-}
+    syncHistoryButtonState(true);
+  } else {
+    historyList.classList.add("collapsed");
+    historyList.style.height = `${getCollapsedHistoryHeight()}px`;
+    syncHistoryButtonState(false);
+  }
 }
 
 function toggleHistory() {
+  if (history.length <= 2) return;
 
-const historyList = document.getElementById("historyList")
-const toggleBtn = document.getElementById("toggleHistoryBtn")
-
-if (!historyList || !toggleBtn) return
-if (history.length <= 2) return
-
-historyExpanded = !historyExpanded
-applyHistoryState(true)
-
+  historyExpanded = !historyExpanded;
+  applyHistoryState(true);
 }
-
-
-/* MINI PAINEL */
 
 function updateStats() {
+  const atendidas = history.length;
+  const canceladas = history.filter((item) => item.result === "Cancelado").length;
+  const taxa = atendidas > 0 ? (canceladas / atendidas) * 100 : 0;
 
-let atendidas = history.length
+  const totalEl = document.getElementById("statTotal");
+  const rateEl = document.getElementById("statRate");
 
-let canceladas = history.filter(
-item => item.result === "Cancelado"
-).length
+  if (totalEl) {
+    totalEl.textContent = atendidas;
+  }
 
-let taxa = 0
+  if (rateEl) {
+    rateEl.textContent = `${taxa.toFixed(1)}%`;
+  }
 
-if (atendidas > 0) {
-taxa = (canceladas / atendidas) * 100
+  const rateCard = rateEl?.closest(".stats-card");
+  if (!rateCard) return;
+
+  if (taxa <= 12.5) {
+    rateCard.style.borderLeftColor = "#10b981";
+  } else if (taxa <= 14) {
+    rateCard.style.borderLeftColor = "#f59e0b";
+  } else {
+    rateCard.style.borderLeftColor = "#ef4444";
+  }
 }
 
-const totalEl = document.getElementById("statTotal")
-const rateEl = document.getElementById("statRate")
+async function addToHistory(duration, result, reason) {
+  if (!currentProfile) return;
 
-if (totalEl) {
-totalEl.textContent = atendidas
+  const now = new Date();
+  const cancelCountOfDay =
+    result === "Cancelado"
+      ? history.filter((item) => item.result === "Cancelado").length + 1
+      : 0;
+
+  const data = {
+    date: now.toLocaleDateString(),
+    time: now.toLocaleTimeString(),
+    duration,
+    result,
+    reason,
+    timestamp: now.getTime(),
+    operator: currentProfile.matricula,
+    operatorName: currentProfile.nome,
+    operatorTag: currentProfile.tag,
+    cancelCountOfDay
+  };
+
+  history.unshift(data);
+  renderHistory();
+
+  try {
+    await salvarAtendimento(currentProfile, data);
+  } catch (error) {
+    console.error("Erro ao salvar atendimento:", error);
+  }
 }
-
-if (rateEl) {
-rateEl.textContent = taxa.toFixed(1) + "%"
-}
-
-/* COR AUTOMÁTICA DA TAXA */
-
-const rateCard = rateEl?.closest(".stats-card")
-
-if (rateCard) {
-
-if (taxa <= 12.5) {
-rateCard.style.borderLeftColor = "#10b981"
-}
-
-else if (taxa <= 14) {
-rateCard.style.borderLeftColor = "#f59e0b"
-}
-
-else {
-rateCard.style.borderLeftColor = "#ef4444"
-}
-
-}
-
-}
-
-
-/* SALVAR HISTÓRICO */
-
-function addToHistory(duration, result, reason) {
-
-const now = new Date()
-const cancelCountOfDay =
-result === "Cancelado"
-? history.filter(item => item.result === "Cancelado").length + 1
-: 0
-
-const data = {
-
-date: now.toLocaleDateString(),
-time: now.toLocaleTimeString(),
-duration: duration,
-result: result,
-reason: reason,
-timestamp: now.getTime(),
-operator: matricula,
-cancelCountOfDay: cancelCountOfDay
-
-}
-
-history.unshift(data)
-
-renderHistory()
-
-if (window.salvarAtendimento) {
-salvarAtendimento(matricula, data)
-}
-
-}
-
-
-/* TIMER */
 
 function formatTime(sec) {
-
-const min = String(Math.floor(sec / 60)).padStart(2, "0")
-const s = String(sec % 60).padStart(2, "0")
-
-return `${min}:${s}`
-
+  const min = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(sec % 60).padStart(2, "0");
+  return `${min}:${s}`;
 }
-
-
-/* CONFIRMAR */
 
 function confirmAction(btn, callback) {
+  if (!btn || btn.dataset.loading === "true") return false;
 
-if (!btn) return false
-if (btn.dataset.loading === "true") return false
+  if (btn.classList.contains("confirming")) {
+    btn.dataset.loading = "true";
+    btn.disabled = true;
+    callback();
+    return true;
+  }
 
-if (btn.classList.contains("confirming")) {
-btn.dataset.loading = "true"
-btn.disabled = true
-callback()
-return true
-}
+  const label = btn.dataset.confirmLabel || "Confirmar";
+  btn.dataset.originalHtml = btn.innerHTML;
+  btn.innerHTML = `<span>${label}</span>`;
+  btn.classList.add("confirming");
 
-const label = btn.dataset.confirmLabel || "Confirmar"
-btn.dataset.originalHtml = btn.innerHTML
+  setTimeout(() => {
+    if (btn.dataset.loading === "true") return;
 
-btn.innerHTML = `<span>${label}</span>`
-btn.classList.add("confirming")
+    btn.classList.remove("confirming");
+    if (btn.dataset.originalHtml) {
+      btn.innerHTML = btn.dataset.originalHtml;
+    }
+  }, 2000);
 
-setTimeout(() => {
-if (btn.dataset.loading === "true") return
-
-btn.classList.remove("confirming")
-if (btn.dataset.originalHtml) {
-btn.innerHTML = btn.dataset.originalHtml
-}
-}, 2000)
-
-return false
-
+  return false;
 }
 
 function resetButtonConfirm(btn) {
-if (!btn) return
+  if (!btn) return;
 
-btn.classList.remove("confirming")
-btn.disabled = false
-btn.dataset.loading = "false"
+  btn.classList.remove("confirming");
+  btn.disabled = false;
+  btn.dataset.loading = "false";
 
-if (btn.dataset.originalHtml) {
-btn.innerHTML = btn.dataset.originalHtml
+  if (btn.dataset.originalHtml) {
+    btn.innerHTML = btn.dataset.originalHtml;
+  }
 }
-}
-
-
-/* REGRAS DE ABERTURA DO PIP */
 
 function canOpenPip() {
-return !!(matricula && String(matricula).trim())
+  return Boolean(currentProfile?.matricula);
 }
-
-
-/* ABRIR PAINEL */
 
 async function openFloatingPanel() {
+  if (!canOpenPip()) {
+    alert("Faça login novamente antes de abrir o painel.");
+    return;
+  }
 
-if (!canOpenPip()) {
-alert("Faça login com a matrícula antes de abrir o painel.")
-return
+  if (!("documentPictureInPicture" in window)) {
+    alert("Seu navegador não oferece suporte ao painel flutuante.");
+    return;
+  }
+
+  if (pipWindow && !pipWindow.closed) {
+    try {
+      pipWindow.focus();
+    } catch (error) {
+      console.error(error);
+    }
+    return;
+  }
+
+  pipWindow = await window.documentPictureInPicture.requestWindow({
+    width: 228,
+    height: 168
+  });
+
+  pipWindow.addEventListener("pagehide", () => {
+    clearInterval(callInterval);
+    pipWindow = null;
+  });
+
+  pipWindow.document.body.innerHTML = window.createPipPanelMarkup(getOperatorDisplayName());
+  bindPanel();
 }
-
-if (!("documentPictureInPicture" in window)) {
-alert("Sem suporte.")
-return
-}
-
-if (pipWindow && !pipWindow.closed) {
-try {
-pipWindow.focus()
-} catch (e) {}
-return
-}
-
-pipWindow = await window.documentPictureInPicture.requestWindow({
-width: 228,
-height: 168
-})
-
-pipWindow.addEventListener("pagehide", () => {
-clearInterval(callInterval)
-pipWindow = null
-})
-
-pipWindow.document.body.innerHTML = window.createPipPanelMarkup(matricula)
-
-bindPanel()
-
-}
-
-
-/* PIP HELPERS */
 
 function getPipScrollElement() {
-if (!pipWindow || pipWindow.closed) return null
-return pipWindow.document.scrollingElement || pipWindow.document.documentElement || pipWindow.document.body
+  if (!pipWindow || pipWindow.closed) return null;
+  return pipWindow.document.scrollingElement || pipWindow.document.documentElement || pipWindow.document.body;
 }
 
 function smoothScrollPipTo(targetEl) {
-if (!pipWindow || pipWindow.closed || !targetEl) return
+  if (!pipWindow || pipWindow.closed || !targetEl) return;
 
-const scrollEl = getPipScrollElement()
-if (!scrollEl) return
+  const scrollEl = getPipScrollElement();
+  if (!scrollEl) return;
 
-requestAnimationFrame(() => {
-requestAnimationFrame(() => {
-try {
-const targetTop = targetEl.offsetTop + targetEl.offsetHeight + 24
-scrollEl.scrollTo({
-top: targetTop,
-behavior: "smooth"
-})
-} catch (e) {}
-})
-})
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        const targetTop = targetEl.offsetTop + targetEl.offsetHeight + 24;
+        scrollEl.scrollTo({
+          top: targetTop,
+          behavior: "smooth"
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  });
 }
 
 function scrollPipToBottom() {
-if (!pipWindow || pipWindow.closed) return
+  if (!pipWindow || pipWindow.closed) return;
 
-const scrollEl = getPipScrollElement()
-if (!scrollEl) return
+  const scrollEl = getPipScrollElement();
+  if (!scrollEl) return;
 
-requestAnimationFrame(() => {
-requestAnimationFrame(() => {
-try {
-scrollEl.scrollTo({
-top: scrollEl.scrollHeight,
-behavior: "smooth"
-})
-} catch (e) {}
-})
-})
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        scrollEl.scrollTo({
+          top: scrollEl.scrollHeight,
+          behavior: "smooth"
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  });
 }
 
 function setPipIdleState(doc) {
-const reasonSelect = doc.getElementById("reasonSelect")
-const confirmBtn = doc.getElementById("confirmBtn")
-const retidoBtn = doc.getElementById("retidoBtn")
-const canceladoBtn = doc.getElementById("canceladoBtn")
-const endBtn = doc.getElementById("endBtn")
+  const reasonSelect = doc.getElementById("reasonSelect");
+  const confirmBtn = doc.getElementById("confirmBtn");
+  const retidoBtn = doc.getElementById("retidoBtn");
+  const canceladoBtn = doc.getElementById("canceladoBtn");
+  const endBtn = doc.getElementById("endBtn");
 
-selectedResult = null
+  selectedResult = null;
 
-if (reasonSelect) {
-reasonSelect.classList.add("hidden")
-reasonSelect.value = ""
-}
+  if (reasonSelect) {
+    reasonSelect.classList.add("hidden");
+    reasonSelect.value = "";
+  }
 
-if (confirmBtn) {
-confirmBtn.classList.add("hidden")
-confirmBtn.innerHTML = "<span>Concluir</span>"
-resetButtonConfirm(confirmBtn)
-}
+  if (confirmBtn) {
+    confirmBtn.classList.add("hidden");
+    confirmBtn.innerHTML = "<span>Concluir</span>";
+    resetButtonConfirm(confirmBtn);
+  }
 
-if (retidoBtn) {
-retidoBtn.innerHTML = "<span>Retido</span>"
-retidoBtn.dataset.confirmLabel = "Confirmar retido"
-resetButtonConfirm(retidoBtn)
-}
+  if (retidoBtn) {
+    retidoBtn.innerHTML = "<span>Retido</span>";
+    retidoBtn.dataset.confirmLabel = "Confirmar retido";
+    resetButtonConfirm(retidoBtn);
+  }
 
-if (canceladoBtn) {
-canceladoBtn.innerHTML = "<span>Cancelado</span>"
-canceladoBtn.dataset.confirmLabel = "Confirmar cancelado"
-resetButtonConfirm(canceladoBtn)
-}
+  if (canceladoBtn) {
+    canceladoBtn.innerHTML = "<span>Cancelado</span>";
+    canceladoBtn.dataset.confirmLabel = "Confirmar cancelado";
+    resetButtonConfirm(canceladoBtn);
+  }
 
-if (endBtn) {
-endBtn.innerHTML = "<span>Encerrar</span>"
-endBtn.dataset.confirmLabel = "Confirmar encerramento"
-resetButtonConfirm(endBtn)
-}
+  if (endBtn) {
+    endBtn.innerHTML = "<span>Encerrar</span>";
+    endBtn.dataset.confirmLabel = "Confirmar encerramento";
+    resetButtonConfirm(endBtn);
+  }
 }
 
 function prepareCanceladoState(doc) {
-const reasonSelect = doc.getElementById("reasonSelect")
-const confirmBtn = doc.getElementById("confirmBtn")
-const retidoBtn = doc.getElementById("retidoBtn")
-const canceladoBtn = doc.getElementById("canceladoBtn")
+  const reasonSelect = doc.getElementById("reasonSelect");
+  const confirmBtn = doc.getElementById("confirmBtn");
+  const retidoBtn = doc.getElementById("retidoBtn");
+  const canceladoBtn = doc.getElementById("canceladoBtn");
 
-selectedResult = "Cancelado"
+  selectedResult = "Cancelado";
 
-if (retidoBtn) {
-retidoBtn.innerHTML = "<span>Retido</span>"
-resetButtonConfirm(retidoBtn)
+  if (retidoBtn) {
+    retidoBtn.innerHTML = "<span>Retido</span>";
+    resetButtonConfirm(retidoBtn);
+  }
+
+  if (canceladoBtn) {
+    canceladoBtn.innerHTML = "<span>Cancelado</span>";
+    resetButtonConfirm(canceladoBtn);
+  }
+
+  if (reasonSelect) {
+    reasonSelect.classList.remove("hidden");
+    reasonSelect.classList.add("fade-in");
+  }
+
+  if (confirmBtn) {
+    confirmBtn.classList.remove("hidden");
+    confirmBtn.innerHTML = "<span>Concluir cancelamento</span>";
+    resetButtonConfirm(confirmBtn);
+  }
+
+  if (confirmBtn) {
+    smoothScrollPipTo(confirmBtn);
+  } else if (reasonSelect) {
+    smoothScrollPipTo(reasonSelect);
+  }
 }
-
-if (canceladoBtn) {
-canceladoBtn.innerHTML = "<span>Cancelado</span>"
-resetButtonConfirm(canceladoBtn)
-}
-
-if (reasonSelect) {
-reasonSelect.classList.remove("hidden")
-reasonSelect.classList.add("fade-in")
-}
-
-if (confirmBtn) {
-confirmBtn.classList.remove("hidden")
-confirmBtn.innerHTML = "<span>Concluir cancelamento</span>"
-resetButtonConfirm(confirmBtn)
-}
-
-if (confirmBtn) {
-smoothScrollPipTo(confirmBtn)
-} else if (reasonSelect) {
-smoothScrollPipTo(reasonSelect)
-}
-}
-
-
-/* BIND */
 
 function bindPanel() {
+  if (!pipWindow || pipWindow.closed) return;
 
-if (!pipWindow || pipWindow.closed) return
+  const doc = pipWindow.document;
+  const statusTitle = doc.getElementById("statusTitle");
+  const timer = doc.getElementById("timer");
+  const startBtn = doc.getElementById("startBtn");
+  const endBtn = doc.getElementById("endBtn");
+  const resultArea = doc.getElementById("resultArea");
+  const retidoBtn = doc.getElementById("retidoBtn");
+  const canceladoBtn = doc.getElementById("canceladoBtn");
+  const reasonSelect = doc.getElementById("reasonSelect");
+  const confirmBtn = doc.getElementById("confirmBtn");
 
-const doc = pipWindow.document
+  setPipIdleState(doc);
 
-const statusTitle = doc.getElementById("statusTitle")
-const timer = doc.getElementById("timer")
+  startBtn.onclick = () => {
+    seconds = 0;
+    timer.textContent = "00:00";
+    statusTitle.textContent = "Atendendo";
 
-const startBtn = doc.getElementById("startBtn")
-const endBtn = doc.getElementById("endBtn")
+    startBtn.classList.add("hidden");
+    timer.classList.remove("hidden");
+    endBtn.classList.remove("hidden");
+    resultArea.classList.add("hidden");
 
-const resultArea = doc.getElementById("resultArea")
+    setPipIdleState(doc);
 
-const retidoBtn = doc.getElementById("retidoBtn")
-const canceladoBtn = doc.getElementById("canceladoBtn")
+    clearInterval(callInterval);
+    callInterval = setInterval(() => {
+      seconds += 1;
+      timer.textContent = formatTime(seconds);
+    }, 1000);
 
-const reasonSelect = doc.getElementById("reasonSelect")
-const confirmBtn = doc.getElementById("confirmBtn")
+    scrollPipToBottom();
+  };
 
-setPipIdleState(doc)
+  endBtn.onclick = () => {
+    const confirmed = confirmAction(endBtn, () => {
+      clearInterval(callInterval);
 
-startBtn.onclick = () => {
+      statusTitle.textContent = "Finalizar";
+      endBtn.classList.add("hidden");
+      resultArea.classList.remove("hidden");
 
-seconds = 0
-timer.textContent = "00:00"
+      setPipIdleState(doc);
+      scrollPipToBottom();
+    });
 
-statusTitle.textContent = "Atendendo"
+    if (!confirmed) {
+      scrollPipToBottom();
+    }
+  };
 
-startBtn.classList.add("hidden")
-timer.classList.remove("hidden")
-endBtn.classList.remove("hidden")
-resultArea.classList.add("hidden")
+  retidoBtn.onclick = () => {
+    if (selectedResult !== "Retido") {
+      selectedResult = "Retido";
 
-setPipIdleState(doc)
+      if (reasonSelect) {
+        reasonSelect.classList.add("hidden");
+        reasonSelect.value = "";
+      }
 
-clearInterval(callInterval)
-callInterval = setInterval(() => {
-seconds++
-timer.textContent = formatTime(seconds)
-}, 1000)
+      if (confirmBtn) {
+        confirmBtn.classList.add("hidden");
+        resetButtonConfirm(confirmBtn);
+      }
 
-scrollPipToBottom()
+      if (canceladoBtn) {
+        canceladoBtn.innerHTML = "<span>Cancelado</span>";
+        resetButtonConfirm(canceladoBtn);
+      }
 
+      resetButtonConfirm(retidoBtn);
+      retidoBtn.dataset.confirmLabel = "Confirmar retido";
+      confirmAction(retidoBtn, () => {});
+      return;
+    }
+
+    confirmAction(retidoBtn, async () => {
+      await addToHistory(formatTime(seconds), "Retido", "");
+      resetPanel();
+    });
+  };
+
+  canceladoBtn.onclick = () => {
+    prepareCanceladoState(doc);
+  };
+
+  confirmBtn.onclick = () => {
+    if (!reasonSelect.value) return;
+
+    confirmAction(confirmBtn, async () => {
+      await addToHistory(formatTime(seconds), "Cancelado", reasonSelect.value);
+      resetPanel();
+    });
+  };
 }
-
-endBtn.onclick = () => {
-const confirmed = confirmAction(endBtn, () => {
-clearInterval(callInterval)
-
-statusTitle.textContent = "Finalizar"
-
-endBtn.classList.add("hidden")
-resultArea.classList.remove("hidden")
-
-setPipIdleState(doc)
-scrollPipToBottom()
-})
-
-if (!confirmed) {
-scrollPipToBottom()
-}
-}
-
-retidoBtn.onclick = () => {
-
-if (selectedResult !== "Retido") {
-selectedResult = "Retido"
-
-if (reasonSelect) {
-reasonSelect.classList.add("hidden")
-reasonSelect.value = ""
-}
-
-if (confirmBtn) {
-confirmBtn.classList.add("hidden")
-resetButtonConfirm(confirmBtn)
-}
-
-if (canceladoBtn) {
-canceladoBtn.innerHTML = "<span>Cancelado</span>"
-resetButtonConfirm(canceladoBtn)
-}
-
-resetButtonConfirm(retidoBtn)
-retidoBtn.dataset.confirmLabel = "Confirmar retido"
-confirmAction(retidoBtn, () => {})
-return
-}
-
-confirmAction(retidoBtn, () => {
-
-addToHistory(
-formatTime(seconds),
-"Retido",
-""
-)
-
-resetPanel()
-
-})
-
-}
-
-canceladoBtn.onclick = () => {
-prepareCanceladoState(doc)
-}
-
-confirmBtn.onclick = () => {
-
-if (!reasonSelect.value) return
-
-confirmAction(confirmBtn, () => {
-
-addToHistory(
-formatTime(seconds),
-"Cancelado",
-reasonSelect.value
-)
-
-resetPanel()
-
-})
-
-}
-
-}
-
-
-/* RESET */
 
 function resetPanel() {
+  clearInterval(callInterval);
 
-clearInterval(callInterval)
+  if (!pipWindow || pipWindow.closed) return;
 
-if (!pipWindow || pipWindow.closed) return
+  const doc = pipWindow.document;
 
-const doc = pipWindow.document
+  seconds = 0;
+  selectedResult = null;
 
-seconds = 0
-selectedResult = null
+  doc.getElementById("statusTitle").textContent = "Disponível";
+  doc.getElementById("timer").textContent = "00:00";
+  doc.getElementById("timer").classList.add("hidden");
+  doc.getElementById("endBtn").classList.add("hidden");
+  doc.getElementById("resultArea").classList.add("hidden");
+  doc.getElementById("startBtn").classList.remove("hidden");
 
-doc.getElementById("statusTitle").textContent = "Disponível"
-doc.getElementById("timer").textContent = "00:00"
-
-doc.getElementById("timer").classList.add("hidden")
-doc.getElementById("endBtn").classList.add("hidden")
-doc.getElementById("resultArea").classList.add("hidden")
-
-doc.getElementById("startBtn").classList.remove("hidden")
-
-setPipIdleState(doc)
-
+  setPipIdleState(doc);
 }
 
-
-/* AUTO PIP */
-
-document.addEventListener("visibilitychange", () => {
-
-if (document.visibilityState === "hidden" && canOpenPip()) {
-openFloatingPanel()
+async function performLogout() {
+  try {
+    await logoutOperator();
+  } finally {
+    window.location.href = "../index.html";
+  }
 }
-
-})
-
-
-/* AJUSTE RESPONSIVO DO HISTÓRICO */
-
-window.addEventListener("resize", () => {
-applyHistoryState()
-})
-
-function logout() {
-sessionStorage.removeItem("ret:mtr")
-window.location.href = "../index.html"
-}
-
-window.logout = logout
 
 function openLogoutModal() {
-const modal = document.getElementById("logoutModal")
-const confirmBtn = document.getElementById("confirmLogoutBtn")
+  const modal = document.getElementById("logoutModal");
+  const confirmBtn = document.getElementById("confirmLogoutBtn");
 
-if (!modal) return
+  if (!modal) return;
 
-modal.classList.remove("hidden")
-
-if (confirmBtn) {
-confirmBtn.focus()
-}
+  modal.classList.remove("hidden");
+  confirmBtn?.focus();
 }
 
 function closeLogoutModal() {
-const modal = document.getElementById("logoutModal")
-if (!modal) return
-
-modal.classList.add("hidden")
+  const modal = document.getElementById("logoutModal");
+  modal?.classList.add("hidden");
 }
 
-window.openLogoutModal = openLogoutModal
+async function initializeDashboard() {
+  currentProfile = await loadCurrentProfile();
 
-document.addEventListener("DOMContentLoaded", () => {
-const input = document.getElementById("matriculaInput")
-const savedMatricula = sessionStorage.getItem("ret:mtr")
-const modal = document.getElementById("logoutModal")
-const cancelLogoutBtn = document.getElementById("cancelLogoutBtn")
-const confirmLogoutBtn = document.getElementById("confirmLogoutBtn")
+  if (!currentProfile) {
+    window.location.href = "../index.html";
+    return;
+  }
 
-if (!savedMatricula) {
-window.location.href = "../index.html"
-return
+  document.getElementById("dashboard")?.classList.remove("hidden");
+  renderOperatorInfo();
+
+  history = await buscarLigacoes(currentProfile);
+  history.sort((a, b) => b.timestamp - a.timestamp);
+  renderHistory();
 }
 
-if (input) {
-input.value = savedMatricula
-}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && canOpenPip()) {
+    openFloatingPanel();
+  }
+});
 
-cancelLogoutBtn?.addEventListener("click", closeLogoutModal)
-confirmLogoutBtn?.addEventListener("click", logout)
+window.addEventListener("resize", () => {
+  applyHistoryState();
+});
 
-modal?.addEventListener("click", (event) => {
-if (event.target === modal) {
-closeLogoutModal()
-}
-})
+document.addEventListener("DOMContentLoaded", async () => {
+  const logoutButton = document.getElementById("logoutButton");
+  const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
+  const openPipButton = document.getElementById("openPipButton");
+  const modal = document.getElementById("logoutModal");
+  const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
+  const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
 
-document.addEventListener("keydown", (event) => {
-if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
-closeLogoutModal()
-}
-})
+  logoutButton?.addEventListener("click", openLogoutModal);
+  toggleHistoryBtn?.addEventListener("click", toggleHistory);
+  openPipButton?.addEventListener("click", openFloatingPanel);
+  cancelLogoutBtn?.addEventListener("click", closeLogoutModal);
+  confirmLogoutBtn?.addEventListener("click", performLogout);
 
-login()
-})
+  modal?.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeLogoutModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+      closeLogoutModal();
+    }
+  });
+
+  await initializeDashboard();
+});

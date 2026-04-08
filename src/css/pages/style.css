@@ -72,6 +72,36 @@ max-width:420px;
 margin-top:40px;
 }
 
+.auth-subtitle{
+margin:-6px 0 18px;
+color:var(--muted);
+font-size:14px;
+line-height:1.5;
+}
+
+.auth-feedback{
+margin:-4px 0 14px;
+padding:10px 12px;
+border-radius:10px;
+font-size:13px;
+line-height:1.4;
+background:rgba(255,255,255,0.06);
+border:1px solid rgba(255,255,255,0.08);
+color:var(--text);
+}
+
+.auth-feedback[data-type="error"]{
+background:rgba(239,68,68,0.12);
+border-color:rgba(239,68,68,0.22);
+color:#fecaca;
+}
+
+.auth-feedback[data-type="success"]{
+background:rgba(16,185,129,0.12);
+border-color:rgba(16,185,129,0.22);
+color:#bbf7d0;
+}
+
 h2{
 margin-top:0;
 margin-bottom:18px;
