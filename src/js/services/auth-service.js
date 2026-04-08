@@ -17,7 +17,7 @@ import {
 import { auth, db } from "./firebase-config.js";
 
 const USERS_COLLECTION = "usuarios";
-const AUTH_DOMAIN = "ret.local";
+const AUTH_DOMAIN = "ret-calculator.app";
 
 function normalizeMatricula(value) {
   const digitsOnly = String(value || "").replace(/\D/g, "");
