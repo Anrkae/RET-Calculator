@@ -7,6 +7,7 @@ let history = []
 
 let matricula = null
 let historyExpanded = false
+let historyAnimation = null
 
 
 /* LOGIN */
@@ -144,6 +145,70 @@ const gap = getHistoryGap()
 return Math.ceil(cards[0].offsetHeight + cards[1].offsetHeight + gap)
 }
 
+function getExpandedHistoryHeight() {
+const historyList = document.getElementById("historyList")
+if (!historyList) return 0
+
+return Math.ceil(historyList.scrollHeight)
+}
+
+function syncHistoryButtonState(isExpanded) {
+const toggleBtn = document.getElementById("toggleHistoryBtn")
+if (!toggleBtn) return
+const icon = toggleBtn.querySelector(".toggle-history-icon")
+
+toggleBtn.classList.toggle("expanded", isExpanded)
+toggleBtn.setAttribute("aria-label", isExpanded ? "Minimizar histÃ³rico" : "Expandir histÃ³rico")
+if (icon && window.gsap) {
+gsap.killTweensOf(icon)
+gsap.to(icon, {
+rotate: isExpanded ? 135 : 0,
+duration: 0.22,
+ease: "power2.out",
+transformOrigin: "50% 50%"
+})
+}
+}
+
+function animateHistoryHeight(historyList, targetHeight) {
+const startHeight = Math.ceil(historyList.getBoundingClientRect().height)
+const endHeight = Math.max(targetHeight, 0)
+
+if (historyAnimation) {
+historyAnimation.cancel()
+historyAnimation = null
+}
+
+historyList.style.height = startHeight + "px"
+historyList.style.overflow = "hidden"
+
+if (startHeight === endHeight) {
+historyList.style.height = endHeight + "px"
+return
+}
+
+historyAnimation = historyList.animate(
+[
+{ height: startHeight + "px" },
+{ height: endHeight + "px" }
+],
+{
+duration: 320,
+easing: "cubic-bezier(.22,1,.36,1)",
+fill: "forwards"
+}
+)
+
+historyAnimation.onfinish = () => {
+historyList.style.height = endHeight + "px"
+historyAnimation = null
+}
+
+historyAnimation.oncancel = () => {
+historyAnimation = null
+}
+}
+
 function applyHistoryState(animate = false) {
 const historyList = document.getElementById("historyList")
 const toggleBtn = document.getElementById("toggleHistoryBtn")
@@ -156,7 +221,7 @@ historyList.classList.remove("collapsed", "expanded")
 
 if (!needsCollapse) {
 historyList.classList.add("expanded")
-historyList.style.maxHeight = historyList.scrollHeight + "px"
+historyList.style.height = historyList.scrollHeight + "px"
 
 if (toggleBtn) {
 toggleBtn.classList.remove("expanded")
@@ -170,14 +235,14 @@ if (historyExpanded) {
 historyList.classList.add("expanded")
 
 if (animate) {
-const startHeight = getCollapsedHistoryHeight()
-historyList.style.maxHeight = startHeight + "px"
+const startHeight = historyList.offsetHeight
+historyList.style.height = startHeight + "px"
 
 requestAnimationFrame(() => {
-historyList.style.maxHeight = historyList.scrollHeight + "px"
+historyList.style.height = historyList.scrollHeight + "px"
 })
 } else {
-historyList.style.maxHeight = historyList.scrollHeight + "px"
+historyList.style.height = historyList.scrollHeight + "px"
 }
 
 if (toggleBtn) {
@@ -188,7 +253,7 @@ toggleBtn.setAttribute("aria-label", "Minimizar histórico")
 historyList.classList.add("collapsed")
 
 const collapsedHeight = getCollapsedHistoryHeight()
-historyList.style.maxHeight = collapsedHeight + "px"
+historyList.style.height = collapsedHeight + "px"
 
 if (toggleBtn) {
 toggleBtn.classList.remove("expanded")
@@ -916,4 +981,67 @@ openFloatingPanel()
 
 window.addEventListener("resize", () => {
 applyHistoryState()
+})
+
+function logout() {
+sessionStorage.removeItem("ret:mtr")
+window.location.href = "../index.html"
+}
+
+window.logout = logout
+
+function openLogoutModal() {
+const modal = document.getElementById("logoutModal")
+const confirmBtn = document.getElementById("confirmLogoutBtn")
+
+if (!modal) return
+
+modal.classList.remove("hidden")
+
+if (confirmBtn) {
+confirmBtn.focus()
+}
+}
+
+function closeLogoutModal() {
+const modal = document.getElementById("logoutModal")
+if (!modal) return
+
+modal.classList.add("hidden")
+}
+
+window.openLogoutModal = openLogoutModal
+
+document.addEventListener("DOMContentLoaded", () => {
+const input = document.getElementById("matriculaInput")
+const savedMatricula = sessionStorage.getItem("ret:mtr")
+const modal = document.getElementById("logoutModal")
+const cancelLogoutBtn = document.getElementById("cancelLogoutBtn")
+const confirmLogoutBtn = document.getElementById("confirmLogoutBtn")
+
+if (!savedMatricula) {
+window.location.href = "../index.html"
+return
+}
+
+if (input) {
+input.value = savedMatricula
+}
+
+cancelLogoutBtn?.addEventListener("click", closeLogoutModal)
+confirmLogoutBtn?.addEventListener("click", logout)
+
+modal?.addEventListener("click", (event) => {
+if (event.target === modal) {
+closeLogoutModal()
+}
+})
+
+document.addEventListener("keydown", (event) => {
+if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
+closeLogoutModal()
+}
+})
+
+login()
 })

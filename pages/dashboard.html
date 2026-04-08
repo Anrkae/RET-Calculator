@@ -1,31 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Painel Retenção</title>
-
-  <link rel="icon" type="image/png" href="./assets/icon.png">
+  <title>Painel Retencao</title>
+  <link rel="icon" type="image/png" href="../assets/icon.png">
   <link rel="stylesheet" href="../src/css/pages/style.css">
 </head>
-
 <body>
-
-  <!-- LOGIN -->
-  <div id="loginScreen" class="card fade-up">
+  <div id="loginScreen" class="card fade-up hidden">
     <h2>Login</h2>
-
-    <input id="matriculaInput" placeholder="Matrícula">
-
+    <input id="matriculaInput" placeholder="Matricula">
     <button class="primary" onclick="login()">
       Entrar
     </button>
   </div>
 
-  <!-- DASHBOARD -->
   <div id="dashboard" class="hidden">
     <div class="card fade-up">
+      <div class="card-toolbar">
+        <button class="ghost logout-button" type="button" onclick="openLogoutModal()">Sair</button>
+      </div>
+
       <h2>Painel</h2>
 
       <div id="operatorInfo"></div>
@@ -34,7 +30,6 @@
         Abrir painel
       </button>
 
-      <!-- RESULTADOS -->
       <div class="resultados">
         <div class="stats-card">
           <div class="stats-number" id="statTotal">0</div>
@@ -47,17 +42,17 @@
         </div>
       </div>
 
-      <!-- HISTÓRICO -->
       <div class="history-section">
         <div class="history-header">
-          <h3>Histórico de atendimentos</h3>
+          <h3>Historico de atendimentos</h3>
 
           <button
             id="toggleHistoryBtn"
             class="ghost hidden"
             type="button"
             onclick="toggleHistory()">
-            Ver mais
+            <span class="toggle-history-icon" aria-hidden="true"></span>
+            <span class="sr-only">Ver mais</span>
           </button>
         </div>
 
@@ -66,9 +61,20 @@
     </div>
   </div>
 
+  <div id="logoutModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+    <div class="modal-card fade-up">
+      <h3 id="logoutModalTitle">Sair da sessao?</h3>
+      <p class="modal-copy">Voce sera levado de volta para a tela de login.</p>
+      <div class="modal-actions">
+        <button id="cancelLogoutBtn" class="ghost" type="button">Cancelar</button>
+        <button id="confirmLogoutBtn" class="primary" type="button">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="../src/js/pages/firebase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
   <script src="../src/js/ui/animations.js"></script>
   <script src="../src/js/pages/dashboard.js"></script>
-
 </body>
 </html>
