@@ -50,7 +50,7 @@ function setMode(mode) {
   backButton.classList.toggle("hidden", mode === authModes.lookup);
 
   if (mode === authModes.lookup) {
-    subtitle.textContent = "Digite sua matrícula para continuar.";
+    subtitle.textContent = "Digite seu ALMOPE para continuar.";
     continueButton.textContent = "Continuar";
     passwordInput.value = "";
     nameInput.value = "";
@@ -72,7 +72,7 @@ function setMode(mode) {
   nameInput.classList.remove("hidden");
   passwordInput.classList.remove("hidden");
   passwordInput.autocomplete = "new-password";
-  passwordInput.placeholder = "Crie uma senha com pelo menos 6 caracteres";
+  passwordInput.placeholder = "Crie sua senha";
   nameInput.focus();
 }
 
