@@ -39,18 +39,14 @@ function setMode(mode) {
   const continueButton = document.getElementById("continueButton");
   const backButton = document.getElementById("backButton");
   const nameInput = document.getElementById("nameInput");
-  const nameLabel = document.getElementById("nameLabel");
   const passwordInput = document.getElementById("passwordInput");
-  const passwordLabel = document.getElementById("passwordLabel");
 
-  if (!subtitle || !continueButton || !backButton || !nameInput || !nameLabel || !passwordInput || !passwordLabel) {
+  if (!subtitle || !continueButton || !backButton || !nameInput || !passwordInput) {
     return;
   }
 
   nameInput.classList.add("hidden");
-  nameLabel.classList.add("hidden");
   passwordInput.classList.add("hidden");
-  passwordLabel.classList.add("hidden");
   backButton.classList.toggle("hidden", mode === authModes.lookup);
 
   if (mode === authModes.lookup) {
@@ -62,9 +58,8 @@ function setMode(mode) {
   }
 
   if (mode === authModes.login) {
-    subtitle.textContent = "Já encontramos seu acesso. Agora é só digitar sua senha.";
+    subtitle.textContent = "Agora digite sua senha.";
     continueButton.textContent = "Entrar";
-    passwordLabel.classList.remove("hidden");
     passwordInput.classList.remove("hidden");
     passwordInput.autocomplete = "current-password";
     passwordInput.placeholder = "Digite sua senha";
@@ -72,11 +67,9 @@ function setMode(mode) {
     return;
   }
 
-  subtitle.textContent = "Esse parece ser seu primeiro acesso. Preencha seus dados para continuar.";
+  subtitle.textContent = "Crie seu acesso.";
   continueButton.textContent = "Criar acesso";
-  nameLabel.classList.remove("hidden");
   nameInput.classList.remove("hidden");
-  passwordLabel.classList.remove("hidden");
   passwordInput.classList.remove("hidden");
   passwordInput.autocomplete = "new-password";
   passwordInput.placeholder = "Crie uma senha com pelo menos 6 caracteres";
