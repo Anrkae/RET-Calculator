@@ -9,7 +9,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  query,
   setDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -72,6 +71,23 @@ async function ensureLoginIndex({ uid, matricula, email }) {
     email,
     createdAt: new Date().toISOString()
   });
+}
+
+async function searchUserByMatricula(matricula) {
+  const normalizedMatricula = normalizeMatricula(matricula);
+
+  if (!normalizedMatricula) {
+    throw new Error("Digite o Almope que você quer buscar.");
+  }
+
+  const loginIndexDoc = await getDoc(doc(db, LOGIN_INDEX_COLLECTION, normalizedMatricula));
+
+  if (!loginIndexDoc.exists()) {
+    return null;
+  }
+
+  const { uid } = loginIndexDoc.data();
+  return getUserProfileByUid(uid);
 }
 
 async function registerOperator({ matricula, password, nome }) {
@@ -206,5 +222,6 @@ export {
   logoutOperator,
   matriculaHasAccess,
   registerOperator,
+  searchUserByMatricula,
   updateUserTag
 };

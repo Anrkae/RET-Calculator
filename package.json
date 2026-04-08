@@ -1,0 +1,11 @@
+{
+  "name": "ret-calculator-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "delete:anonymous-auth": "node scripts/delete-anonymous-auth.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

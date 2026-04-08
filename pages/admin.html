@@ -10,10 +10,10 @@
   <div id="adminLogin" class="auth-shell">
     <div class="auth-card">
       <h1>Acesso administrativo</h1>
-      <p class="auth-copy">Entre com matrícula e senha. Somente usuários com tag adm podem acessar esta página.</p>
+      <p class="auth-copy">Entre com Almope e senha. Somente usuários com tag adm podem acessar esta página.</p>
       <p id="adminAuthFeedback" class="auth-feedback hidden"></p>
 
-      <input id="adminMatriculaInput" type="text" placeholder="Matrícula" autocomplete="username" inputmode="numeric">
+      <input id="adminMatriculaInput" type="text" placeholder="Almope" autocomplete="username" inputmode="numeric">
       <input id="adminPasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
 
       <button id="adminLoginButton" class="primary-button" type="button">Entrar</button>
@@ -40,7 +40,7 @@
 
     <section class="summary-card">
       <strong id="adminIdentity"></strong>
-      <span>Usuários com tag adm podem promover ou rebaixar acessos abaixo.</span>
+      <span>Use a busca por Almope para localizar um colaborador e atualizar a tag de acesso.</span>
     </section>
 
     <section class="panel">
@@ -53,7 +53,7 @@
         <table id="resultsTable">
           <thead>
             <tr>
-              <th>Operador</th>
+              <th>Colaborador</th>
               <th>Atendidas</th>
               <th>Cancelamentos</th>
               <th>Taxa de Desconexão</th>
@@ -64,28 +64,54 @@
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Acessos</h2>
-        <span>Tag adm só pode ser aplicada por um administrador autenticado.</span>
+    <section class="panel panel-compact">
+      <div class="access-strip">
+        <div>
+          <h2>Acessos</h2>
+          <span>Busca pontual de colaboradores por Almope.</span>
+        </div>
+        <button id="openUserSearchButton" class="primary-button compact-button" type="button">Buscar colaborador</button>
       </div>
 
       <p id="usersFeedback" class="auth-feedback hidden"></p>
 
-      <div class="table-container">
-        <table id="usersTable">
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>Nome</th>
-              <th>Tag</th>
-              <th>Ação</th>
-            </tr>
-          </thead>
-          <tbody id="usersTableBody"></tbody>
-        </table>
+      <div id="selectedUserCard" class="selected-user-card hidden">
+        <div class="selected-user-head">
+          <div>
+            <strong id="selectedUserName">-</strong>
+            <span id="selectedUserMeta">-</span>
+          </div>
+          <span id="selectedUserTagBadge" class="tag-pill">cr</span>
+        </div>
+
+        <div class="selected-user-actions">
+          <select id="selectedUserTagSelect" class="tag-select">
+            <option value="cr">cr</option>
+            <option value="adm">adm</option>
+          </select>
+          <button id="saveSelectedUserButton" class="table-action" type="button">Salvar tag</button>
+        </div>
       </div>
     </section>
+  </div>
+
+  <div id="userSearchModal" class="modal-shell hidden" role="dialog" aria-modal="true" aria-labelledby="userSearchTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="userSearchTitle">Buscar colaborador</h3>
+          <p>Digite o Almope para localizar um acesso específico.</p>
+        </div>
+        <button id="closeUserSearchButton" class="ghost-icon-button" type="button" aria-label="Fechar">×</button>
+      </div>
+
+      <p id="userSearchFeedback" class="auth-feedback hidden"></p>
+
+      <div class="modal-form">
+        <input id="userSearchInput" type="text" placeholder="Almope" inputmode="numeric">
+        <button id="searchUserButton" class="primary-button compact-button" type="button">Buscar</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="../src/js/pages/gestao.js"></script>

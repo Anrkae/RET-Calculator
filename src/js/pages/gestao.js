@@ -1,14 +1,19 @@
 import { listarLigacoes } from "../services/atendimentos-service.js";
 import {
-  listUsers,
   loadCurrentProfile,
   loginOperator,
   logoutOperator,
+  searchUserByMatricula,
   updateUserTag
 } from "../services/auth-service.js";
 
 let dadosBrutos = [];
 let currentProfile = null;
+let selectedUser = null;
+
+function normalizeMatricula(value) {
+  return String(value || "").replace(/\D/g, "").trim();
+}
 
 function setAuthFeedback(message = "", type = "error") {
   const feedback = document.getElementById("adminAuthFeedback");
@@ -28,19 +33,59 @@ function setUsersFeedback(message = "", type = "success") {
   feedback.dataset.type = type;
 }
 
+function setSearchFeedback(message = "", type = "error") {
+  const feedback = document.getElementById("userSearchFeedback");
+  if (!feedback) return;
+
+  feedback.textContent = message;
+  feedback.classList.toggle("hidden", !message);
+  feedback.dataset.type = type;
+}
+
 function showAdminApp(profile) {
   document.getElementById("adminLogin")?.classList.add("hidden");
   document.getElementById("adminApp")?.classList.remove("hidden");
 
   const identity = document.getElementById("adminIdentity");
   if (identity) {
-    identity.textContent = `${profile.nome} • Matrícula ${profile.matricula}`;
+    identity.textContent = `${profile.nome} • ${profile.matricula}`;
   }
 }
 
 function showLogin() {
   document.getElementById("adminLogin")?.classList.remove("hidden");
   document.getElementById("adminApp")?.classList.add("hidden");
+}
+
+function openUserSearchModal() {
+  document.getElementById("userSearchModal")?.classList.remove("hidden");
+  document.getElementById("userSearchInput")?.focus();
+}
+
+function closeUserSearchModal() {
+  document.getElementById("userSearchModal")?.classList.add("hidden");
+}
+
+function renderSelectedUser() {
+  const card = document.getElementById("selectedUserCard");
+  const name = document.getElementById("selectedUserName");
+  const meta = document.getElementById("selectedUserMeta");
+  const badge = document.getElementById("selectedUserTagBadge");
+  const select = document.getElementById("selectedUserTagSelect");
+
+  if (!card || !name || !meta || !badge || !select) return;
+
+  if (!selectedUser) {
+    card.classList.add("hidden");
+    return;
+  }
+
+  card.classList.remove("hidden");
+  name.textContent = selectedUser.nome || "Sem nome";
+  meta.textContent = `Almope ${selectedUser.matricula || "-"}`;
+  badge.textContent = selectedUser.tag || "cr";
+  badge.dataset.tag = selectedUser.tag || "cr";
+  select.value = selectedUser.tag || "cr";
 }
 
 async function carregarDados() {
@@ -139,66 +184,52 @@ function getCorTaxa(taxa) {
   return "#ef4444";
 }
 
-async function carregarUsuarios() {
+async function handleSearchUser() {
+  const input = document.getElementById("userSearchInput");
+  const matricula = normalizeMatricula(input?.value);
+
+  setSearchFeedback("");
+
+  if (!matricula) {
+    setSearchFeedback("Digite o Almope que você quer localizar.", "error");
+    return;
+  }
+
   try {
-    const users = await listUsers();
-    renderizarUsuarios(users);
+    const user = await searchUserByMatricula(matricula);
+
+    if (!user) {
+      setSearchFeedback("Não encontrei um colaborador com esse Almope.", "error");
+      return;
+    }
+
+    selectedUser = user;
+    renderSelectedUser();
+    closeUserSearchModal();
+    setUsersFeedback(`Colaborador ${user.nome} carregado para edição.`, "success");
   } catch (error) {
-    console.error("Erro ao carregar usuários:", error);
-    setUsersFeedback("Não foi possível carregar os acessos.", "error");
+    console.error("Erro ao buscar colaborador:", error);
+    setSearchFeedback(error.message || "Não foi possível buscar esse colaborador agora.", "error");
   }
 }
 
-function renderizarUsuarios(users) {
-  const tbody = document.getElementById("usersTableBody");
-  if (!tbody) return;
+async function handleSaveSelectedUser() {
+  const select = document.getElementById("selectedUserTagSelect");
 
-  tbody.innerHTML = "";
+  if (!selectedUser || !select) return;
 
-  users
-    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")))
-    .forEach((user) => {
-      const tr = document.createElement("tr");
-      const userUid = user.uid || user.id;
-      const disabled = userUid === currentProfile?.uid ? "disabled" : "";
-
-      tr.innerHTML = `
-        <td>${user.matricula || "-"}</td>
-        <td>${user.nome || "-"}</td>
-        <td>
-          <select class="tag-select" data-uid="${userUid}" ${disabled}>
-            <option value="cr" ${user.tag === "cr" ? "selected" : ""}>cr</option>
-            <option value="adm" ${user.tag === "adm" ? "selected" : ""}>adm</option>
-          </select>
-        </td>
-        <td>
-          <button class="table-action" data-uid="${userUid}" ${disabled}>Salvar</button>
-        </td>
-      `;
-
-      tbody.appendChild(tr);
-    });
-
-  tbody.querySelectorAll(".table-action").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const uid = button.dataset.uid;
-      const select = tbody.querySelector(`.tag-select[data-uid="${uid}"]`);
-      const tag = select?.value;
-
-      if (!uid || !tag) return;
-
-      try {
-        button.disabled = true;
-        await updateUserTag(uid, tag);
-        setUsersFeedback("Tag atualizada com sucesso.", "success");
-        await carregarUsuarios();
-      } catch (error) {
-        console.error("Erro ao atualizar tag:", error);
-        setUsersFeedback(error.message || "Não foi possível atualizar a tag.", "error");
-        button.disabled = false;
-      }
-    });
-  });
+  try {
+    await updateUserTag(selectedUser.uid || selectedUser.id, select.value);
+    selectedUser = {
+      ...selectedUser,
+      tag: select.value
+    };
+    renderSelectedUser();
+    setUsersFeedback("Tag atualizada com sucesso.", "success");
+  } catch (error) {
+    console.error("Erro ao atualizar tag:", error);
+    setUsersFeedback(error.message || "Não foi possível atualizar a tag.", "error");
+  }
 }
 
 async function handleAdminLogin() {
@@ -211,7 +242,7 @@ async function handleAdminLogin() {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setAuthFeedback("Não encontrei um acesso ativo para essa matrícula.", "error");
+      setAuthFeedback("Não encontrei um acesso ativo para esse Almope.", "error");
       return;
     }
 
@@ -226,7 +257,6 @@ async function handleAdminLogin() {
     currentProfile = refreshedProfile;
     showAdminApp(currentProfile);
     await carregarDados();
-    await carregarUsuarios();
   } catch (error) {
     setAuthFeedback(error.message || "Não foi possível entrar.", "error");
   }
@@ -249,7 +279,6 @@ async function initializeAdmin() {
 
   showAdminApp(currentProfile);
   await carregarDados();
-  await carregarUsuarios();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -258,6 +287,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const matriculaInput = document.getElementById("adminMatriculaInput");
   const periodFilter = document.getElementById("periodFilter");
   const adminLogoutButton = document.getElementById("adminLogoutButton");
+  const openUserSearchButton = document.getElementById("openUserSearchButton");
+  const closeUserSearchButton = document.getElementById("closeUserSearchButton");
+  const searchUserButton = document.getElementById("searchUserButton");
+  const userSearchInput = document.getElementById("userSearchInput");
+  const saveSelectedUserButton = document.getElementById("saveSelectedUserButton");
+  const userSearchModal = document.getElementById("userSearchModal");
 
   loginButton?.addEventListener("click", handleAdminLogin);
   passwordInput?.addEventListener("keydown", (event) => {
@@ -285,6 +320,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   adminLogoutButton?.addEventListener("click", async () => {
     await logoutOperator();
     window.location.href = "../index.html";
+  });
+
+  openUserSearchButton?.addEventListener("click", openUserSearchModal);
+  closeUserSearchButton?.addEventListener("click", closeUserSearchModal);
+  searchUserButton?.addEventListener("click", handleSearchUser);
+  userSearchInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      handleSearchUser();
+    }
+  });
+  saveSelectedUserButton?.addEventListener("click", handleSaveSelectedUser);
+
+  userSearchModal?.addEventListener("click", (event) => {
+    if (event.target === userSearchModal) {
+      closeUserSearchModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeUserSearchModal();
+    }
   });
 
   await initializeAdmin();

@@ -1,0 +1,17 @@
+EXCLUSAO DE USUARIOS ANONIMOS DO FIREBASE AUTH
+
+1. Abra o terminal na raiz do projeto.
+
+2. Instale a dependencia do script:
+npm.cmd install
+
+3. Rode primeiro em modo de conferencia:
+npm.cmd run delete:anonymous-auth -- --service-account "C:\Users\anrk0\Downloads\claro-ret-firebase-adminsdk-fbsvc-e1295c0804.json" --dry-run
+
+4. Se a lista estiver correta, rode a exclusao real:
+npm.cmd run delete:anonymous-auth -- --service-account "C:\Users\anrk0\Downloads\claro-ret-firebase-adminsdk-fbsvc-e1295c0804.json"
+
+OBSERVACAO:
+- Esse script remove apenas usuarios anonimos do Firebase Authentication.
+- Ele nao apaga documentos do Firestore.
+- Recomenda-se sempre rodar o dry-run antes.
