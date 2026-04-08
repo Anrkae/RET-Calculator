@@ -1,6 +1,7 @@
 import {
   buscarLigacoes,
-  salvarAtendimento
+  salvarAtendimento,
+  salvarDemanda
 } from "../services/atendimentos-service.js";
 import {
   loadCurrentProfile,
@@ -16,6 +17,82 @@ let history = [];
 let currentProfile = null;
 let historyExpanded = false;
 let historyAnimation = null;
+let selectedDemandType = "";
+
+const demandTemplates = {
+  "encaixe-vt": `
+    <div class="demand-grid">
+      <div>
+        <label for="demandContract">Contrato</label>
+        <input id="demandContract" type="text" placeholder="000/123456789">
+      </div>
+      <div>
+        <label for="demandDate">Data</label>
+        <input id="demandDate" type="date">
+      </div>
+    </div>
+    <div class="demand-grid">
+      <div>
+        <label for="demandStartHour">Das</label>
+        <input id="demandStartHour" type="text" placeholder="14h">
+      </div>
+      <div>
+        <label for="demandEndHour">Às</label>
+        <input id="demandEndHour" type="text" placeholder="17h">
+      </div>
+    </div>
+    <div class="demand-grid">
+      <div>
+        <label for="demandArea">Área</label>
+        <input id="demandArea" type="text" placeholder="Área X">
+      </div>
+      <div>
+        <label for="demandClasse">Classe</label>
+        <input id="demandClasse" type="text" placeholder="Classe Y">
+      </div>
+    </div>
+  `,
+  "retirar-ponto": `
+    <div class="demand-grid">
+      <div>
+        <label for="demandContract">Contrato</label>
+        <input id="demandContract" type="text" placeholder="000/123456789">
+      </div>
+      <div>
+        <label for="demandDate">Data</label>
+        <input id="demandDate" type="date">
+      </div>
+    </div>
+    <div class="demand-grid-3">
+      <div>
+        <label for="demandStartHour">Das</label>
+        <input id="demandStartHour" type="text" placeholder="14h">
+      </div>
+      <div>
+        <label for="demandEndHour">Às</label>
+        <input id="demandEndHour" type="text" placeholder="17h">
+      </div>
+      <div>
+        <label for="demandPoint">Ponto</label>
+        <input id="demandPoint" type="text" placeholder="2">
+      </div>
+    </div>
+  `,
+  suspensao: `
+    <div>
+      <label for="demandContract">Contrato</label>
+      <input id="demandContract" type="text" placeholder="000/123456789">
+    </div>
+    <div>
+      <label>O que será suspenso?</label>
+      <div class="checkbox-row">
+        <label class="checkbox-chip"><input type="checkbox" value="TV" data-suspension-item> TV</label>
+        <label class="checkbox-chip"><input type="checkbox" value="Virtua" data-suspension-item> Virtua</label>
+        <label class="checkbox-chip"><input type="checkbox" value="Fone" data-suspension-item> Fone</label>
+      </div>
+    </div>
+  `
+};
 
 function getOperatorDisplayName() {
   return currentProfile?.nome || currentProfile?.matricula || "";
@@ -33,6 +110,183 @@ function renderOperatorInfo() {
   if (!operatorInfo) return;
 
   operatorInfo.textContent = getOperatorInfoLabel();
+}
+
+function setDemandFeedback(message = "", type = "error") {
+  const feedback = document.getElementById("demandFeedback");
+  if (!feedback) return;
+
+  feedback.textContent = message;
+  feedback.classList.toggle("hidden", !message);
+  feedback.dataset.type = type;
+}
+
+function openDemandModal() {
+  document.getElementById("demandModal")?.classList.remove("hidden");
+}
+
+function closeDemandModal() {
+  document.getElementById("demandModal")?.classList.add("hidden");
+  setDemandFeedback("");
+  selectedDemandType = "";
+  const typeSelect = document.getElementById("demandTypeSelect");
+  if (typeSelect) {
+    typeSelect.value = "";
+  }
+  renderDemandFields();
+}
+
+function renderDemandFields() {
+  const container = document.getElementById("demandDynamicFields");
+  if (!container) return;
+
+  if (!selectedDemandType) {
+    container.innerHTML = "";
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.innerHTML = demandTemplates[selectedDemandType] || "";
+  container.classList.remove("hidden");
+}
+
+function normalizeContract(value) {
+  const raw = String(value || "").replace(/\D/g, "");
+  if (raw.length < 12) return value?.trim() || "";
+  return `${raw.slice(0, 3)}/${raw.slice(3, 12)}`;
+}
+
+function normalizeHour(value) {
+  const raw = String(value || "").replace(/\D/g, "");
+  if (!raw) return "";
+  return `${raw.slice(0, 2)}h`;
+}
+
+function formatDateToBr(value) {
+  if (!value) return "";
+  const [year, month, day] = String(value).split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
+
+function getDemandValue(id) {
+  return document.getElementById(id)?.value?.trim() || "";
+}
+
+function buildDemandMessage(payload) {
+  const operatorName = getOperatorDisplayName();
+
+  if (payload.demandType === "encaixe-vt") {
+    return `📌 *Encaixe VT*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*\n👨🏾‍🔧 *${payload.area}* - *${payload.classe}*`;
+  }
+
+  if (payload.demandType === "retirar-ponto") {
+    return `📌 *Retirar Ponto Virtua*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*\n🔢 *Ponto ${payload.point}*`;
+  }
+
+  return `📌 *Suspensão Temporária*\n\n👤 ${operatorName}\n📄 *${payload.contract}*\n⏸️ *${payload.suspensionItems.join(", ")}*`;
+}
+
+function collectDemandPayload() {
+  const contract = normalizeContract(getDemandValue("demandContract"));
+  const contractPattern = /^\d{3}\/\d{9}$/;
+
+  if (!selectedDemandType) {
+    throw new Error("Selecione o tipo de demanda.");
+  }
+
+  if (!contractPattern.test(contract)) {
+    throw new Error("Digite o contrato no formato 000/123456789.");
+  }
+
+  if (selectedDemandType === "suspensao") {
+    const suspensionItems = Array.from(document.querySelectorAll("[data-suspension-item]:checked"))
+      .map((input) => input.value);
+
+    if (!suspensionItems.length) {
+      throw new Error("Selecione pelo menos um item para suspender.");
+    }
+
+    const payload = {
+      demandType: selectedDemandType,
+      contract,
+      suspensionItems
+    };
+
+    return {
+      ...payload,
+      message: buildDemandMessage(payload)
+    };
+  }
+
+  const date = formatDateToBr(getDemandValue("demandDate"));
+  const startHour = normalizeHour(getDemandValue("demandStartHour"));
+  const endHour = normalizeHour(getDemandValue("demandEndHour"));
+
+  if (!date) {
+    throw new Error("Selecione a data da demanda.");
+  }
+
+  if (!/^\d{2}h$/.test(startHour) || !/^\d{2}h$/.test(endHour)) {
+    throw new Error("Preencha o horário no formato 14h e 17h.");
+  }
+
+  if (selectedDemandType === "encaixe-vt") {
+    const area = getDemandValue("demandArea");
+    const classe = getDemandValue("demandClasse");
+
+    if (!area || !classe) {
+      throw new Error("Preencha a área e a classe.");
+    }
+
+    const payload = {
+      demandType: selectedDemandType,
+      contract,
+      date,
+      startHour,
+      endHour,
+      area,
+      classe
+    };
+
+    return {
+      ...payload,
+      message: buildDemandMessage(payload)
+    };
+  }
+
+  const point = getDemandValue("demandPoint");
+
+  if (!/^\d{1,2}$/.test(point)) {
+    throw new Error("O ponto deve ter 1 ou 2 dígitos.");
+  }
+
+  const payload = {
+    demandType: selectedDemandType,
+    contract,
+    date,
+    startHour,
+    endHour,
+    point
+  };
+
+  return {
+    ...payload,
+    message: buildDemandMessage(payload)
+  };
+}
+
+async function submitDemand() {
+  try {
+    const payload = collectDemandPayload();
+    await salvarDemanda(currentProfile, payload);
+    setDemandFeedback("Demanda enviada para a fila com sucesso.", "success");
+    setTimeout(() => {
+      closeDemandModal();
+    }, 700);
+  } catch (error) {
+    setDemandFeedback(error.message || "Não foi possível enviar a demanda.", "error");
+  }
 }
 
 function renderHistory() {
@@ -614,15 +868,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoutButton = document.getElementById("logoutButton");
   const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
   const openPipButton = document.getElementById("openPipButton");
+  const openDemandButton = document.getElementById("openDemandButton");
   const modal = document.getElementById("logoutModal");
   const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
   const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
+  const demandModal = document.getElementById("demandModal");
+  const demandTypeSelect = document.getElementById("demandTypeSelect");
+  const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
+  const cancelDemandBtn = document.getElementById("cancelDemandBtn");
+  const submitDemandBtn = document.getElementById("submitDemandBtn");
 
   logoutButton?.addEventListener("click", openLogoutModal);
   toggleHistoryBtn?.addEventListener("click", toggleHistory);
   openPipButton?.addEventListener("click", openFloatingPanel);
+  openDemandButton?.addEventListener("click", openDemandModal);
   cancelLogoutBtn?.addEventListener("click", closeLogoutModal);
   confirmLogoutBtn?.addEventListener("click", performLogout);
+  closeDemandModalBtn?.addEventListener("click", closeDemandModal);
+  cancelDemandBtn?.addEventListener("click", closeDemandModal);
+  submitDemandBtn?.addEventListener("click", submitDemand);
+  demandTypeSelect?.addEventListener("change", (event) => {
+    selectedDemandType = event.target.value;
+    setDemandFeedback("");
+    renderDemandFields();
+  });
 
   modal?.addEventListener("click", (event) => {
     if (event.target === modal) {
@@ -630,9 +899,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  demandModal?.addEventListener("click", (event) => {
+    if (event.target === demandModal) {
+      closeDemandModal();
+    }
+  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
       closeLogoutModal();
+    }
+    if (event.key === "Escape" && demandModal && !demandModal.classList.contains("hidden")) {
+      closeDemandModal();
     }
   });
 

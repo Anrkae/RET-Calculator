@@ -1,0 +1,151 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function currentUserExists() {
+      return isSignedIn() && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return currentUserExists() && currentUserDoc().data.tag == 'adm';
+    }
+
+    function isOwnUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function validTag(tag) {
+      return tag in ['cr', 'adm'];
+    }
+
+    match /usuarios/{uid} {
+      allow create: if isOwnUser(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'matricula', 'nome', 'tag', 'email', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.matricula is string
+        && request.resource.data.nome is string
+        && request.resource.data.email is string
+        && validTag(request.resource.data.tag);
+
+      allow read: if isOwnUser(uid) || isAdmin();
+
+      allow update: if isAdmin()
+        && resource.data.uid == request.resource.data.uid
+        && resource.data.matricula == request.resource.data.matricula
+        && resource.data.nome == request.resource.data.nome
+        && resource.data.email == request.resource.data.email
+        && resource.data.createdAt == request.resource.data.createdAt
+        && validTag(request.resource.data.tag);
+
+      allow delete: if false;
+    }
+
+    match /loginIndex/{matricula} {
+      allow read: if true;
+
+      allow create: if currentUserExists()
+        && request.resource.data.keys().hasOnly(['uid', 'matricula', 'email', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.matricula == matricula
+        && request.resource.data.email == currentUserDoc().data.email;
+
+      allow update, delete: if false;
+    }
+
+    match /registrosAtendimento/{registroId} {
+      allow create: if currentUserExists()
+        && request.resource.data.keys().hasOnly([
+          'date',
+          'time',
+          'duration',
+          'result',
+          'reason',
+          'timestamp',
+          'operator',
+          'operatorName',
+          'cancelCountOfDay',
+          'uid',
+          'dayId',
+          'whatsappSent'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.operator == currentUserDoc().data.matricula
+        && request.resource.data.operatorName == currentUserDoc().data.nome;
+
+      allow read: if currentUserExists()
+        && (resource.data.uid == request.auth.uid || isAdmin());
+
+      allow update, delete: if false;
+    }
+
+    match /cancelamentoFila/{queueId} {
+      allow create: if currentUserExists()
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'operator',
+          'operatorName',
+          'cancelCountOfDay',
+          'reason',
+          'duration',
+          'time',
+          'dayId',
+          'sourceTimestamp',
+          'status',
+          'attempts',
+          'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.operator == currentUserDoc().data.matricula
+        && request.resource.data.operatorName == currentUserDoc().data.nome
+        && request.resource.data.status == 'pending';
+
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /demandasFila/{queueId} {
+      allow create: if currentUserExists()
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'operator',
+          'operatorName',
+          'demandType',
+          'contract',
+          'date',
+          'startHour',
+          'endHour',
+          'area',
+          'classe',
+          'point',
+          'suspensionItems',
+          'message',
+          'status',
+          'attempts',
+          'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.operator == currentUserDoc().data.matricula
+        && request.resource.data.operatorName == currentUserDoc().data.nome
+        && request.resource.data.status == 'pending';
+
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /atendimentos/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

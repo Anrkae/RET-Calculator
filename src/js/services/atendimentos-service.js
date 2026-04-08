@@ -9,6 +9,7 @@ import { db } from "./firebase-config.js";
 
 const REGISTROS_COLLECTION = "registrosAtendimento";
 const CANCELAMENTO_QUEUE_COLLECTION = "cancelamentoFila";
+const DEMANDAS_QUEUE_COLLECTION = "demandasFila";
 
 function getTodayId() {
   const now = new Date();
@@ -89,6 +90,31 @@ async function buscarLigacoes(profile) {
   return snapshot.docs.map((snapshotDoc) => snapshotDoc.data());
 }
 
+async function salvarDemanda(profile, payload) {
+  if (!profile?.uid || !profile?.matricula || !profile?.nome) {
+    throw new Error("Perfil do operador inválido.");
+  }
+
+  await addDoc(collection(db, DEMANDAS_QUEUE_COLLECTION), {
+    uid: profile.uid,
+    operator: profile.matricula,
+    operatorName: profile.nome,
+    demandType: payload.demandType,
+    contract: payload.contract,
+    date: payload.date || "",
+    startHour: payload.startHour || "",
+    endHour: payload.endHour || "",
+    area: payload.area || "",
+    classe: payload.classe || "",
+    point: payload.point || "",
+    suspensionItems: payload.suspensionItems || [],
+    message: payload.message,
+    status: "pending",
+    attempts: 0,
+    createdAt: new Date().toISOString()
+  });
+}
+
 async function listarLigacoes() {
   const ligacoesQuery = query(collection(db, REGISTROS_COLLECTION));
   const snapshot = await getDocs(ligacoesQuery);
@@ -108,5 +134,6 @@ export {
   getTodayId,
   listarLigacoes,
   parseStoredDate,
-  salvarAtendimento
+  salvarAtendimento,
+  salvarDemanda
 };
