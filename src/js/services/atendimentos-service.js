@@ -8,6 +8,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
+const CANCELAMENTO_WEBHOOK_URL =
+  "https://gleefully-canelike-shaun.ngrok-free.dev/webhook/cancelamento-whatsapp";
+
 function getTodayId() {
   const now = new Date();
   const year = now.getFullYear();
@@ -58,6 +61,24 @@ async function salvarAtendimento(matricula, data) {
       ...atendimento,
       status: "pending"
     });
+
+    try {
+      await fetch(CANCELAMENTO_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          operator: atendimento.operator,
+          cancelCountOfDay: atendimento.cancelCountOfDay,
+          reason: atendimento.reason,
+          duration: atendimento.duration,
+          time: atendimento.time
+        })
+      });
+    } catch (error) {
+      console.error("Erro ao acionar webhook do cancelamento:", error);
+    }
   }
 }
 
