@@ -81,7 +81,7 @@ async function handleLookup() {
   const matricula = normalizeMatricula(input?.value);
 
   if (!matricula) {
-    setFeedback("Informe sua matrícula para eu continuar com o acesso.", "error");
+    setFeedback("Informe seu Almope para eu continuar com o acesso.", "error");
     return;
   }
 
@@ -126,8 +126,8 @@ async function handleRegister() {
 
     redirectToDashboard();
   } catch (error) {
-    if (error.message === "Essa matrícula já possui acesso.") {
-      setFeedback("Essa matrícula já possui acesso. Digite sua senha para entrar.", "error");
+    if (error.message === "Esse Almope já possui acesso.") {
+      setFeedback("Esse Almope já possui acesso. Digite sua senha para entrar.", "error");
       setMode(authModes.login);
       return;
     }
