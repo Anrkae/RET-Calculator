@@ -94,6 +94,138 @@ const demandTemplates = {
   `
 };
 
+function buildDayOptions() {
+  return Array.from({ length: 31 }, (_, index) => {
+    const value = String(index + 1).padStart(2, "0");
+    return `<option value="${value}">${value}</option>`;
+  }).join("");
+}
+
+function buildMonthOptions() {
+  return [
+    ["01", "Jan"],
+    ["02", "Fev"],
+    ["03", "Mar"],
+    ["04", "Abr"],
+    ["05", "Mai"],
+    ["06", "Jun"],
+    ["07", "Jul"],
+    ["08", "Ago"],
+    ["09", "Set"],
+    ["10", "Out"],
+    ["11", "Nov"],
+    ["12", "Dez"]
+  ].map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+}
+
+function buildYearOptions() {
+  const currentYear = new Date().getFullYear();
+  return [currentYear, currentYear + 1]
+    .map((year) => `<option value="${year}">${year}</option>`)
+    .join("");
+}
+
+function buildDateFieldsTemplate() {
+  return `
+    <div>
+      <label>Data</label>
+      <div class="demand-grid-3 demand-date-grid">
+        <select id="demandDateDay">
+          <option value="">Dia</option>
+          ${buildDayOptions()}
+        </select>
+        <select id="demandDateMonth">
+          <option value="">Mês</option>
+          ${buildMonthOptions()}
+        </select>
+        <select id="demandDateYear">
+          <option value="">Ano</option>
+          ${buildYearOptions()}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function getDemandTemplate(type) {
+  if (type === "encaixe-vt") {
+    return `
+      <div class="demand-grid demand-grid-wide">
+        <div>
+          <label for="demandContract">Contrato</label>
+          <input id="demandContract" type="text" inputmode="numeric" maxlength="13" placeholder="000/123456789">
+        </div>
+        ${buildDateFieldsTemplate()}
+      </div>
+      <div class="demand-grid demand-grid-wide">
+        <div>
+          <label for="demandStartHour">Das</label>
+          <input id="demandStartHour" type="text" inputmode="numeric" maxlength="3" placeholder="14h">
+        </div>
+        <div>
+          <label for="demandEndHour">Às</label>
+          <input id="demandEndHour" type="text" inputmode="numeric" maxlength="3" placeholder="17h">
+        </div>
+      </div>
+      <div class="demand-grid demand-grid-wide">
+        <div>
+          <label for="demandArea">Área</label>
+          <input id="demandArea" type="text" maxlength="24" placeholder="X">
+        </div>
+        <div>
+          <label for="demandClasse">Classe</label>
+          <input id="demandClasse" type="text" maxlength="24" placeholder="Y">
+        </div>
+      </div>
+    `;
+  }
+
+  if (type === "retirar-ponto") {
+    return `
+      <div class="demand-grid demand-grid-wide">
+        <div>
+          <label for="demandContract">Contrato</label>
+          <input id="demandContract" type="text" inputmode="numeric" maxlength="13" placeholder="000/123456789">
+        </div>
+        ${buildDateFieldsTemplate()}
+      </div>
+      <div class="demand-grid-3 demand-grid-spacious">
+        <div>
+          <label for="demandStartHour">Das</label>
+          <input id="demandStartHour" type="text" inputmode="numeric" maxlength="3" placeholder="14h">
+        </div>
+        <div>
+          <label for="demandEndHour">Às</label>
+          <input id="demandEndHour" type="text" inputmode="numeric" maxlength="3" placeholder="17h">
+        </div>
+        <div>
+          <label for="demandPoint">Ponto</label>
+          <input id="demandPoint" type="text" inputmode="numeric" maxlength="2" placeholder="2">
+        </div>
+      </div>
+    `;
+  }
+
+  if (type === "suspensao") {
+    return `
+      <div>
+        <label for="demandContract">Contrato</label>
+        <input id="demandContract" type="text" inputmode="numeric" maxlength="13" placeholder="000/123456789">
+      </div>
+      <div>
+        <label>O que será suspenso?</label>
+        <div class="checkbox-row">
+          <label class="checkbox-chip"><input type="checkbox" value="TV" data-suspension-item> TV</label>
+          <label class="checkbox-chip"><input type="checkbox" value="Virtua" data-suspension-item> Virtua</label>
+          <label class="checkbox-chip"><input type="checkbox" value="Fone" data-suspension-item> Fone</label>
+        </div>
+      </div>
+    `;
+  }
+
+  return demandTemplates[type] || "";
+}
+
 function getOperatorDisplayName() {
   return currentProfile?.nome || currentProfile?.matricula || "";
 }
@@ -146,31 +278,69 @@ function renderDemandFields() {
     return;
   }
 
-  container.innerHTML = demandTemplates[selectedDemandType] || "";
+  container.innerHTML = getDemandTemplate(selectedDemandType);
   container.classList.remove("hidden");
 }
 
+function formatContractInput(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 12);
+  if (digits.length <= 3) return digits;
+  return `${digits.slice(0, 3)}/${digits.slice(3)}`;
+}
+
 function normalizeContract(value) {
-  const raw = String(value || "").replace(/\D/g, "");
-  if (raw.length < 12) return value?.trim() || "";
+  const raw = String(value || "").replace(/\D/g, "").slice(0, 12);
+  if (raw.length < 12) return formatContractInput(raw);
   return `${raw.slice(0, 3)}/${raw.slice(3, 12)}`;
 }
 
 function normalizeHour(value) {
-  const raw = String(value || "").replace(/\D/g, "");
+  const raw = String(value || "").replace(/\D/g, "").slice(0, 2);
   if (!raw) return "";
   return `${raw.slice(0, 2)}h`;
 }
 
-function formatDateToBr(value) {
-  if (!value) return "";
-  const [year, month, day] = String(value).split("-");
-  if (!year || !month || !day) return value;
+function buildDemandDate() {
+  const day = getDemandValue("demandDateDay");
+  const month = getDemandValue("demandDateMonth");
+  const year = getDemandValue("demandDateYear");
+
+  if (!day || !month || !year) return "";
+
   return `${day}/${month}/${year}`;
 }
 
 function getDemandValue(id) {
   return document.getElementById(id)?.value?.trim() || "";
+}
+
+function normalizeAreaLabel(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return /^área\s+/i.test(trimmed) ? trimmed : `Área ${trimmed}`;
+}
+
+function normalizeClasseLabel(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return /^classe\s+/i.test(trimmed) ? trimmed : `Classe ${trimmed}`;
+}
+
+function handleDemandFieldFormatting(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+
+  if (target.id === "demandContract") {
+    target.value = formatContractInput(target.value);
+  }
+
+  if (target.id === "demandStartHour" || target.id === "demandEndHour") {
+    target.value = normalizeHour(target.value);
+  }
+
+  if (target.id === "demandPoint") {
+    target.value = String(target.value || "").replace(/\D/g, "").slice(0, 2);
+  }
 }
 
 function buildDemandMessage(payload) {
@@ -219,7 +389,7 @@ function collectDemandPayload() {
     };
   }
 
-  const date = formatDateToBr(getDemandValue("demandDate"));
+  const date = buildDemandDate();
   const startHour = normalizeHour(getDemandValue("demandStartHour"));
   const endHour = normalizeHour(getDemandValue("demandEndHour"));
 
@@ -232,8 +402,8 @@ function collectDemandPayload() {
   }
 
   if (selectedDemandType === "encaixe-vt") {
-    const area = getDemandValue("demandArea");
-    const classe = getDemandValue("demandClasse");
+    const area = normalizeAreaLabel(getDemandValue("demandArea"));
+    const classe = normalizeClasseLabel(getDemandValue("demandClasse"));
 
     if (!area || !classe) {
       throw new Error("Preencha a área e a classe.");
