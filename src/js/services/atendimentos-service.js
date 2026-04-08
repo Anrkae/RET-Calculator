@@ -55,13 +55,6 @@ async function salvarAtendimento(matricula, data) {
   await addDoc(ligacoes, atendimento);
 
   if (data.result === "Cancelado") {
-    const cancelamentos = collection(db, "cancelamentoFila");
-
-    await addDoc(cancelamentos, {
-      ...atendimento,
-      status: "pending"
-    });
-
     try {
       await fetch(CANCELAMENTO_WEBHOOK_URL, {
         method: "POST",
