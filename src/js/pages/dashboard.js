@@ -18,6 +18,9 @@ let currentProfile = null;
 let historyExpanded = false;
 let historyAnimation = null;
 let selectedDemandType = "";
+let selectedDemandDate = "";
+let demandCalendarMonth = new Date().getMonth();
+let demandCalendarYear = new Date().getFullYear();
 
 const demandTemplates = {
   "encaixe-vt": `
@@ -125,7 +128,7 @@ function buildYearOptions() {
     .join("");
 }
 
-function buildDateFieldsTemplate() {
+function buildDateFieldsTemplateLegacy() {
   return `
     <div>
       <label>Data</label>
@@ -261,14 +264,14 @@ function closeDemandModal() {
   document.getElementById("demandModal")?.classList.add("hidden");
   setDemandFeedback("");
   selectedDemandType = "";
-  const typeSelect = document.getElementById("demandTypeSelect");
-  if (typeSelect) {
-    typeSelect.value = "";
-  }
+  selectedDemandDate = "";
+  syncDemandTypeTrigger();
+  closeDemandTypeMenu();
+  closeDemandCalendar();
   renderDemandFields();
 }
 
-function renderDemandFields() {
+function renderDemandFieldsLegacy() {
   const container = document.getElementById("demandDynamicFields");
   if (!container) return;
 
@@ -300,7 +303,7 @@ function normalizeHour(value) {
   return `${raw.slice(0, 2)}h`;
 }
 
-function buildDemandDate() {
+function buildDemandDateLegacy() {
   const day = getDemandValue("demandDateDay");
   const month = getDemandValue("demandDateMonth");
   const year = getDemandValue("demandDateYear");
@@ -341,6 +344,172 @@ function handleDemandFieldFormatting(event) {
   if (target.id === "demandPoint") {
     target.value = String(target.value || "").replace(/\D/g, "").slice(0, 2);
   }
+}
+
+function buildDateFieldsTemplate() {
+  return `
+    <div>
+      <label for="demandDateDisplay">Data</label>
+      <div class="custom-date-picker">
+        <button id="demandDateTrigger" class="custom-date-trigger" type="button" aria-expanded="false">
+          <span id="demandDateDisplay">${selectedDemandDate || "Selecionar data"}</span>
+        </button>
+        <div id="demandCalendar" class="demand-calendar hidden">
+          <div class="demand-calendar-header">
+            <button id="demandCalendarPrev" class="calendar-nav-button" type="button" aria-label="Mês anterior">‹</button>
+            <strong id="demandCalendarLabel"></strong>
+            <button id="demandCalendarNext" class="calendar-nav-button" type="button" aria-label="Próximo mês">›</button>
+          </div>
+          <div class="demand-calendar-weekdays">
+            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+          </div>
+          <div id="demandCalendarGrid" class="demand-calendar-grid"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildDemandDate() {
+  return selectedDemandDate;
+}
+
+function formatDemandTypeLabel(type) {
+  if (type === "encaixe-vt") return "Encaixe VT";
+  if (type === "retirar-ponto") return "Retirar Ponto Virtua";
+  if (type === "suspensao") return "Suspensão Temporária";
+  return "Selecione";
+}
+
+function syncDemandTypeTrigger() {
+  const label = document.getElementById("demandTypeTriggerLabel");
+  if (label) {
+    label.textContent = formatDemandTypeLabel(selectedDemandType);
+  }
+}
+
+function openDemandTypeMenu() {
+  const menu = document.getElementById("demandTypeMenu");
+  const trigger = document.getElementById("demandTypeTrigger");
+  menu?.classList.remove("hidden");
+  trigger?.setAttribute("aria-expanded", "true");
+}
+
+function closeDemandTypeMenu() {
+  const menu = document.getElementById("demandTypeMenu");
+  const trigger = document.getElementById("demandTypeTrigger");
+  menu?.classList.add("hidden");
+  trigger?.setAttribute("aria-expanded", "false");
+}
+
+function getCalendarMonthLabel() {
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" })
+    .format(new Date(demandCalendarYear, demandCalendarMonth, 1));
+}
+
+function renderDemandCalendar() {
+  const grid = document.getElementById("demandCalendarGrid");
+  const label = document.getElementById("demandCalendarLabel");
+  if (!grid || !label) return;
+
+  label.textContent = getCalendarMonthLabel();
+  const firstDay = new Date(demandCalendarYear, demandCalendarMonth, 1).getDay();
+  const daysInMonth = new Date(demandCalendarYear, demandCalendarMonth + 1, 0).getDate();
+  const selectedIso = selectedDemandDate ? selectedDemandDate.split("/").reverse().join("-") : "";
+  const cells = [];
+
+  for (let i = 0; i < firstDay; i += 1) {
+    cells.push('<span class="calendar-day calendar-day-empty"></span>');
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const iso = `${demandCalendarYear}-${String(demandCalendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const isSelected = iso === selectedIso;
+    cells.push(
+      `<button class="calendar-day${isSelected ? " is-selected" : ""}" type="button" data-calendar-day="${day}">${day}</button>`
+    );
+  }
+
+  grid.innerHTML = cells.join("");
+}
+
+function openDemandCalendar() {
+  const calendar = document.getElementById("demandCalendar");
+  const trigger = document.getElementById("demandDateTrigger");
+  calendar?.classList.remove("hidden");
+  trigger?.setAttribute("aria-expanded", "true");
+  renderDemandCalendar();
+}
+
+function closeDemandCalendar() {
+  const calendar = document.getElementById("demandCalendar");
+  const trigger = document.getElementById("demandDateTrigger");
+  calendar?.classList.add("hidden");
+  trigger?.setAttribute("aria-expanded", "false");
+}
+
+function selectDemandDate(day) {
+  selectedDemandDate = `${String(day).padStart(2, "0")}/${String(demandCalendarMonth + 1).padStart(2, "0")}/${demandCalendarYear}`;
+  const display = document.getElementById("demandDateDisplay");
+  if (display) {
+    display.textContent = selectedDemandDate;
+  }
+  closeDemandCalendar();
+}
+
+function attachDemandFieldEnhancements() {
+  const dateTrigger = document.getElementById("demandDateTrigger");
+  const prevMonthBtn = document.getElementById("demandCalendarPrev");
+  const nextMonthBtn = document.getElementById("demandCalendarNext");
+  const calendarGrid = document.getElementById("demandCalendarGrid");
+
+  dateTrigger?.addEventListener("click", () => {
+    const calendar = document.getElementById("demandCalendar");
+    if (calendar?.classList.contains("hidden")) {
+      openDemandCalendar();
+    } else {
+      closeDemandCalendar();
+    }
+  });
+
+  prevMonthBtn?.addEventListener("click", () => {
+    demandCalendarMonth -= 1;
+    if (demandCalendarMonth < 0) {
+      demandCalendarMonth = 11;
+      demandCalendarYear -= 1;
+    }
+    renderDemandCalendar();
+  });
+
+  nextMonthBtn?.addEventListener("click", () => {
+    demandCalendarMonth += 1;
+    if (demandCalendarMonth > 11) {
+      demandCalendarMonth = 0;
+      demandCalendarYear += 1;
+    }
+    renderDemandCalendar();
+  });
+
+  calendarGrid?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-calendar-day]");
+    if (!target) return;
+    selectDemandDate(Number(target.dataset.calendarDay));
+  });
+}
+
+function renderDemandFields() {
+  const container = document.getElementById("demandDynamicFields");
+  if (!container) return;
+
+  if (!selectedDemandType) {
+    container.innerHTML = "";
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.innerHTML = getDemandTemplate(selectedDemandType);
+  container.classList.remove("hidden");
+  attachDemandFieldEnhancements();
 }
 
 function buildDemandMessage(payload) {
@@ -1043,7 +1212,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
   const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
   const demandModal = document.getElementById("demandModal");
-  const demandTypeSelect = document.getElementById("demandTypeSelect");
+  const demandTypeTrigger = document.getElementById("demandTypeTrigger");
+  const demandTypeMenu = document.getElementById("demandTypeMenu");
   const demandDynamicFields = document.getElementById("demandDynamicFields");
   const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
   const cancelDemandBtn = document.getElementById("cancelDemandBtn");
@@ -1059,9 +1229,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
   demandDynamicFields?.addEventListener("input", handleDemandFieldFormatting);
-  demandTypeSelect?.addEventListener("change", (event) => {
-    selectedDemandType = event.target.value;
+  demandTypeTrigger?.addEventListener("click", () => {
+    const menuIsHidden = demandTypeMenu?.classList.contains("hidden");
+    if (menuIsHidden) {
+      openDemandTypeMenu();
+    } else {
+      closeDemandTypeMenu();
+    }
+  });
+  demandTypeMenu?.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-demand-type-option]");
+    if (!option) return;
+    selectedDemandType = option.dataset.demandTypeOption;
     setDemandFeedback("");
+    syncDemandTypeTrigger();
+    closeDemandTypeMenu();
     renderDemandFields();
   });
 
@@ -1074,6 +1256,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   demandModal?.addEventListener("click", (event) => {
     if (event.target === demandModal) {
       closeDemandModal();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    const selectWrap = document.getElementById("demandTypeSelectWrap");
+    const calendarWrap = document.querySelector(".custom-date-picker");
+
+    if (selectWrap && !selectWrap.contains(event.target)) {
+      closeDemandTypeMenu();
+    }
+
+    if (calendarWrap && !calendarWrap.contains(event.target)) {
+      closeDemandCalendar();
     }
   });
 

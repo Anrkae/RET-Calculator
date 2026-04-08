@@ -81,13 +81,17 @@
       <p id="demandFeedback" class="auth-feedback hidden"></p>
 
       <div class="demand-form">
-        <label for="demandTypeSelect">Tipo de demanda</label>
-        <select id="demandTypeSelect">
-          <option value="">Selecione</option>
-          <option value="encaixe-vt">Encaixe VT</option>
-          <option value="retirar-ponto">Retirar Ponto Virtua</option>
-          <option value="suspensao">Suspensão Temporária</option>
-        </select>
+        <label for="demandTypeTrigger">Tipo de demanda</label>
+        <div class="custom-select" id="demandTypeSelectWrap">
+          <button id="demandTypeTrigger" class="custom-select-trigger" type="button" aria-expanded="false">
+            <span id="demandTypeTriggerLabel">Selecione</span>
+          </button>
+          <div id="demandTypeMenu" class="custom-select-menu hidden" role="listbox">
+            <button class="custom-select-option" type="button" data-demand-type-option="encaixe-vt">Encaixe VT</button>
+            <button class="custom-select-option" type="button" data-demand-type-option="retirar-ponto">Retirar Ponto Virtua</button>
+            <button class="custom-select-option" type="button" data-demand-type-option="suspensao">Suspensão Temporária</button>
+          </div>
+        </div>
 
         <div id="demandDynamicFields" class="demand-dynamic-fields hidden"></div>
       </div>
