@@ -323,7 +323,7 @@ function addToHistory(duration, result, reason) {
 const now = new Date()
 const cancelCountOfDay =
 result === "Cancelado"
-? history.filter(item => item.result === "Cancelado").length
+? history.filter(item => item.result === "Cancelado").length + 1
 : 0
 
 const data = {
@@ -810,4 +810,3 @@ closeLogoutModal()
 
 login()
 })
-
