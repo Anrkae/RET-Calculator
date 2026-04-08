@@ -93,7 +93,7 @@ function getCorTaxa(taxa) {
 }
 
 document.getElementById("periodFilter").addEventListener("change", () => {
-    const labels = { diario: "hoje", semanal: "desta semana", mensal: "deste mes" };
+    const labels = { diario: "hoje", semanal: "desta semana", mensal: "deste mês" };
     document.getElementById("periodLabel").textContent = `Exibindo resultados ${labels[document.getElementById("periodFilter").value]}`;
     processarEExibir();
 });

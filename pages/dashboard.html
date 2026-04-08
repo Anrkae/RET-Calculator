@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Painel Retencao</title>
+  <title>Painel Retenção</title>
   <link rel="icon" type="image/png" href="../assets/icon.png">
   <link rel="stylesheet" href="../src/css/pages/style.css">
 </head>
 <body>
   <div id="loginScreen" class="card fade-up hidden">
     <h2>Login</h2>
-    <input id="matriculaInput" placeholder="Matricula">
+    <input id="matriculaInput" placeholder="Matrícula">
     <button class="primary" onclick="login()">
       Entrar
     </button>
@@ -44,14 +44,17 @@
 
       <div class="history-section">
         <div class="history-header">
-          <h3>Historico de atendimentos</h3>
+          <h3>Histórico de atendimentos</h3>
 
           <button
             id="toggleHistoryBtn"
             class="ghost hidden"
             type="button"
             onclick="toggleHistory()">
-            <span class="toggle-history-icon" aria-hidden="true"></span>
+            <span class="toggle-history-icon" aria-hidden="true">
+              <span class="toggle-history-bar toggle-history-bar-a"></span>
+              <span class="toggle-history-bar toggle-history-bar-b"></span>
+            </span>
             <span class="sr-only">Ver mais</span>
           </button>
         </div>
@@ -63,8 +66,8 @@
 
   <div id="logoutModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
     <div class="modal-card fade-up">
-      <h3 id="logoutModalTitle">Sair da sessao?</h3>
-      <p class="modal-copy">Voce sera levado de volta para a tela de login.</p>
+      <h3 id="logoutModalTitle">Sair da sessão?</h3>
+      <p class="modal-copy">Você será levado de volta para a tela de login.</p>
       <div class="modal-actions">
         <button id="cancelLogoutBtn" class="ghost" type="button">Cancelar</button>
         <button id="confirmLogoutBtn" class="primary" type="button">Confirmar</button>
@@ -73,7 +76,7 @@
   </div>
 
   <script type="module" src="../src/js/pages/firebase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+  <script src="../src/js/ui/pip-snippet.js"></script>
   <script src="../src/js/ui/animations.js"></script>
   <script src="../src/js/pages/dashboard.js"></script>
 </body>

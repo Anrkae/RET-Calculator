@@ -292,7 +292,6 @@ font-size:0;
 line-height:1;
 flex-shrink:0;
 transition:
-transform .16s ease,
 background .18s ease,
 border-color .18s ease,
 box-shadow .18s ease;
@@ -301,32 +300,52 @@ box-shadow .18s ease;
 #toggleHistoryBtn:hover{
 background:rgba(255,255,255,0.09);
 box-shadow:0 6px 16px rgba(0,0,0,0.22);
+transform:none;
 }
 
 .toggle-history-icon{
 position:relative;
 display:block;
-width:16px;
-height:16px;
+width:20px;
+height:20px;
 pointer-events:none;
-transform-origin:50% 50%;
+transform:scale(1);
+transition:transform .32s cubic-bezier(.2,.9,.2,1);
+will-change:transform;
 }
 
-.toggle-history-icon::before,
-.toggle-history-icon::after{
-content:"";
+.toggle-history-bar{
 position:absolute;
 top:50%;
 left:50%;
-width:16px;
-height:2px;
+width:17px;
+height:2.5px;
 border-radius:999px;
-background:#fff;
-transform:translate(-50%, -50%);
+background:linear-gradient(90deg, rgba(255,255,255,0.92), #ffffff, rgba(255,255,255,0.92));
+box-shadow:0 0 0 1px rgba(255,255,255,0.04), 0 1px 6px rgba(0,0,0,0.18);
+transform-origin:50% 50%;
+transition:transform .32s cubic-bezier(.2,.9,.2,1), opacity .22s ease;
+will-change:transform;
 }
 
-.toggle-history-icon::after{
+.toggle-history-bar-a{
+transform:translate(-50%, -50%) rotate(0deg);
+}
+
+.toggle-history-bar-b{
 transform:translate(-50%, -50%) rotate(90deg);
+}
+
+#toggleHistoryBtn.expanded .toggle-history-icon{
+transform:scale(1.06);
+}
+
+#toggleHistoryBtn.expanded .toggle-history-bar-a{
+transform:translate(-50%, -50%) rotate(45deg);
+}
+
+#toggleHistoryBtn.expanded .toggle-history-bar-b{
+transform:translate(-50%, -50%) rotate(-45deg);
 }
 
 .sr-only{
