@@ -1,0 +1,5 @@
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "COLE_AQUI_A_PRODUCTION_URL_EXATA" `
+  -ContentType "application/json" `
+  -Body '{"operator":"123456","cancelCountOfDay":4,"reason":"Mudança de endereço","duration":"02:15","time":"10:32:00"}'
