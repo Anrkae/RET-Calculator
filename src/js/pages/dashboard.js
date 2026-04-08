@@ -1044,6 +1044,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
   const demandModal = document.getElementById("demandModal");
   const demandTypeSelect = document.getElementById("demandTypeSelect");
+  const demandDynamicFields = document.getElementById("demandDynamicFields");
   const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
   const cancelDemandBtn = document.getElementById("cancelDemandBtn");
   const submitDemandBtn = document.getElementById("submitDemandBtn");
@@ -1057,6 +1058,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
+  demandDynamicFields?.addEventListener("input", handleDemandFieldFormatting);
   demandTypeSelect?.addEventListener("change", (event) => {
     selectedDemandType = event.target.value;
     setDemandFeedback("");
