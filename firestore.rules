@@ -105,6 +105,39 @@ service cloud.firestore {
         && request.resource.data.whatsappSent is bool;
     }
 
+    function validCancelamentoFilaCreate() {
+      let profile = currentUserDoc().data;
+
+      return request.resource.data.keys().hasOnly([
+          "uid",
+          "operator",
+          "operatorName",
+          "operatorTag",
+          "cancelCountOfDay",
+          "reason",
+          "duration",
+          "time",
+          "dayId",
+          "sourceTimestamp",
+          "status",
+          "attempts",
+          "createdAt"
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.operator == profile.matricula
+        && request.resource.data.operatorName == profile.nome
+        && request.resource.data.operatorTag == profile.tag
+        && request.resource.data.cancelCountOfDay is int
+        && request.resource.data.reason is string
+        && request.resource.data.duration is string
+        && request.resource.data.time is string
+        && request.resource.data.dayId is string
+        && request.resource.data.sourceTimestamp is int
+        && request.resource.data.status == "pending"
+        && request.resource.data.attempts == 0
+        && request.resource.data.createdAt is string;
+    }
+
     match /usuarios/{uid} {
       allow create: if isOwnUser(uid) && validUserCreate(uid);
       allow read: if isOwnUser(uid) || isAdmin();
@@ -121,6 +154,12 @@ service cloud.firestore {
     match /registrosAtendimento/{registroId} {
       allow create: if currentUserExists() && validRegistroCreate();
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+
+    match /cancelamentoFila/{queueId} {
+      allow create: if currentUserExists() && validCancelamentoFilaCreate();
+      allow read: if isAdmin();
       allow update, delete: if false;
     }
 

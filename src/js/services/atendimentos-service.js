@@ -7,9 +7,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { db } from "./firebase-config.js";
 
-const CANCELAMENTO_WEBHOOK_URL =
-  "https://gleefully-canelike-shaun.ngrok-free.dev/webhook/cancelamento-whatsapp";
 const REGISTROS_COLLECTION = "registrosAtendimento";
+const CANCELAMENTO_QUEUE_COLLECTION = "cancelamentoFila";
 
 function getTodayId() {
   const now = new Date();
@@ -60,25 +59,21 @@ async function salvarAtendimento(profile, data) {
   await addDoc(registros, atendimento);
 
   if (data.result === "Cancelado") {
-    try {
-      await fetch(CANCELAMENTO_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          operator: atendimento.operator,
-          operatorName: atendimento.operatorName,
-          operatorTag: atendimento.operatorTag,
-          cancelCountOfDay: atendimento.cancelCountOfDay,
-          reason: atendimento.reason,
-          duration: atendimento.duration,
-          time: atendimento.time
-        })
-      });
-    } catch (error) {
-      console.error("Erro ao acionar webhook do cancelamento:", error);
-    }
+    await addDoc(collection(db, CANCELAMENTO_QUEUE_COLLECTION), {
+      uid: atendimento.uid,
+      operator: atendimento.operator,
+      operatorName: atendimento.operatorName,
+      operatorTag: atendimento.operatorTag,
+      cancelCountOfDay: atendimento.cancelCountOfDay,
+      reason: atendimento.reason,
+      duration: atendimento.duration,
+      time: atendimento.time,
+      dayId: atendimento.dayId,
+      sourceTimestamp: atendimento.timestamp,
+      status: "pending",
+      attempts: 0,
+      createdAt: new Date().toISOString()
+    });
   }
 }
 

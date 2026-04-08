@@ -1,0 +1,48 @@
+WEBHOOK SEGURO VIA FILA DO FIRESTORE
+
+OBJETIVO
+O frontend nao chama mais o webhook do n8n diretamente.
+Agora o fluxo funciona assim:
+
+1. O operador salva um cancelamento no app.
+2. O app grava esse evento na colecao cancelamentoFila.
+3. Um worker local no seu PC le essa fila.
+4. O worker chama o webhook do n8n internamente.
+
+VANTAGEM
+- A URL do webhook nao fica exposta no navegador.
+- O bot nao depende mais de CORS.
+- O navegador nao fala mais direto com o n8n.
+
+PASSO 1
+Instale a dependencia do worker:
+
+npm.cmd install
+
+PASSO 2
+Publique as novas firestore.rules no Firebase.
+
+PASSO 3
+Com o n8n rodando localmente, inicie o worker:
+
+npm.cmd run process:cancelamento-fila -- --service-account "C:\Users\anrk0\Downloads\claro-ret-firebase-adminsdk-fbsvc-e1295c0804.json"
+
+O webhook padrao usado pelo worker e:
+http://localhost:5678/webhook/cancelamento-whatsapp
+
+PASSO 4
+Se quiser usar outra URL de webhook:
+
+npm.cmd run process:cancelamento-fila -- --service-account "C:\Users\anrk0\Downloads\claro-ret-firebase-adminsdk-fbsvc-e1295c0804.json" --webhook-url "http://localhost:5678/webhook/cancelamento-whatsapp"
+
+PASSO 5
+Teste no app:
+- registre um cancelamento
+- confira se o documento entrou em cancelamentoFila
+- confira se o worker marcou como sent
+- confira se a mensagem chegou no grupo
+
+OBSERVACOES
+- O worker deve ficar aberto no seu PC junto com n8n e WPPConnect.
+- O frontend nao precisa mais conhecer a URL do ngrok.
+- Se o webhook falhar, o documento continua pending com contador de tentativas e lastError.
