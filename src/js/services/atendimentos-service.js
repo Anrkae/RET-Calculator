@@ -42,7 +42,23 @@ async function salvarAtendimento(matricula, data) {
   const operadorDoc = doc(dayDoc, "operadores", matricula);
   const ligacoes = collection(operadorDoc, "ligacoes");
 
-  await addDoc(ligacoes, data);
+  const atendimento = {
+    ...data,
+    operator: matricula,
+    dayId: todayId,
+    whatsappSent: false
+  };
+
+  await addDoc(ligacoes, atendimento);
+
+  if (data.result === "Cancelado") {
+    const cancelamentos = collection(db, "cancelamentoFila");
+
+    await addDoc(cancelamentos, {
+      ...atendimento,
+      status: "pending"
+    });
+  }
 }
 
 async function buscarLigacoes(matricula) {

@@ -321,6 +321,10 @@ rateCard.style.borderLeftColor = "#ef4444"
 function addToHistory(duration, result, reason) {
 
 const now = new Date()
+const cancelCountOfDay =
+result === "Cancelado"
+? history.filter(item => item.result === "Cancelado").length
+: 0
 
 const data = {
 
@@ -330,7 +334,8 @@ duration: duration,
 result: result,
 reason: reason,
 timestamp: now.getTime(),
-operator: matricula
+operator: matricula,
+cancelCountOfDay: cancelCountOfDay
 
 }
 
@@ -805,5 +810,4 @@ closeLogoutModal()
 
 login()
 })
-
 
