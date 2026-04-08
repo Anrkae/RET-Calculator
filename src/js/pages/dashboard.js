@@ -225,7 +225,6 @@ async function addToHistory(duration, result, reason) {
     timestamp: now.getTime(),
     operator: currentProfile.matricula,
     operatorName: currentProfile.nome,
-    operatorTag: currentProfile.tag,
     cancelCountOfDay
   };
 

@@ -51,7 +51,6 @@ async function salvarAtendimento(profile, data) {
     uid: profile.uid,
     operator: profile.matricula,
     operatorName: profile.nome,
-    operatorTag: profile.tag,
     dayId: todayId,
     whatsappSent: false
   };
@@ -63,7 +62,6 @@ async function salvarAtendimento(profile, data) {
       uid: atendimento.uid,
       operator: atendimento.operator,
       operatorName: atendimento.operatorName,
-      operatorTag: atendimento.operatorTag,
       cancelCountOfDay: atendimento.cancelCountOfDay,
       reason: atendimento.reason,
       duration: atendimento.duration,
