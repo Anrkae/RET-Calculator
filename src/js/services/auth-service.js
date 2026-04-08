@@ -80,7 +80,7 @@ async function registerOperator({ matricula, password, nome }) {
   const trimmedPassword = String(password || "").trim();
 
   if (!normalizedMatricula) {
-    throw new Error("Digite sua matrícula para continuar.");
+    throw new Error("Digite seu Almope para continuar.");
   }
 
   if (!trimmedName) {
@@ -101,7 +101,7 @@ async function registerOperator({ matricula, password, nome }) {
     );
   } catch (error) {
     if (error?.code === "auth/email-already-in-use") {
-      throw new Error("Essa matrícula já possui acesso.");
+      throw new Error("Esse Almope já possui acesso.");
     }
 
     throw error;
@@ -127,7 +127,7 @@ async function loginOperator({ matricula, password }) {
   const trimmedPassword = String(password || "").trim();
 
   if (!normalizedMatricula) {
-    throw new Error("Digite sua matrícula para continuar.");
+    throw new Error("Digite seu Almope para continuar.");
   }
 
   if (!trimmedPassword) {
@@ -148,7 +148,7 @@ async function loginOperator({ matricula, password }) {
       error?.code === "auth/user-not-found" ||
       error?.code === "auth/wrong-password"
     ) {
-      throw new Error("Não consegui entrar com esses dados. Confira matrícula e senha.");
+      throw new Error("Não consegui entrar com esses dados. Confira Almope e senha.");
     }
 
     throw error;
