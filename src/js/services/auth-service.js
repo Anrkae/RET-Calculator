@@ -19,8 +19,7 @@ const LOGIN_INDEX_COLLECTION = "loginIndex";
 const AUTH_DOMAIN = "ret-calculator.app";
 
 function normalizeMatricula(value) {
-  const digitsOnly = String(value || "").replace(/\D/g, "");
-  return digitsOnly.trim();
+  return String(value || "").replace(/\D/g, "").trim();
 }
 
 function buildSyntheticEmail(matricula) {
@@ -123,13 +122,16 @@ async function registerOperator({ matricula, password, nome }) {
     throw error;
   }
 
+  const nowIso = new Date().toISOString();
   const profile = {
     uid: credential.user.uid,
     matricula: normalizedMatricula,
     nome: trimmedName,
     tag: "cr",
+    supervisor: "",
     email: buildSyntheticEmail(normalizedMatricula),
-    createdAt: new Date().toISOString()
+    createdAt: nowIso,
+    updatedAt: nowIso
   };
 
   await setDoc(doc(db, USERS_COLLECTION, credential.user.uid), profile);
@@ -199,7 +201,7 @@ async function listUsers() {
   }));
 }
 
-async function updateUserTag(uid, tag) {
+async function updateUserAccess(uid, { tag, supervisor }) {
   if (!uid) {
     throw new Error("Não consegui identificar o usuário que será atualizado.");
   }
@@ -210,6 +212,7 @@ async function updateUserTag(uid, tag) {
 
   await updateDoc(doc(db, USERS_COLLECTION, uid), {
     tag,
+    supervisor: String(supervisor || "").trim(),
     updatedAt: new Date().toISOString()
   });
 }
@@ -223,5 +226,5 @@ export {
   matriculaHasAccess,
   registerOperator,
   searchUserByMatricula,
-  updateUserTag
+  updateUserAccess
 };

@@ -1,6 +1,8 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   query,
   where
@@ -45,24 +47,24 @@ async function salvarAtendimento(profile, data) {
   }
 
   const todayId = getTodayId();
-  const registros = collection(db, REGISTROS_COLLECTION);
-
   const atendimento = {
     ...data,
     uid: profile.uid,
     operator: profile.matricula,
     operatorName: profile.nome,
+    supervisor: profile.supervisor || "",
     dayId: todayId,
     whatsappSent: false
   };
 
-  await addDoc(registros, atendimento);
+  await addDoc(collection(db, REGISTROS_COLLECTION), atendimento);
 
   if (data.result === "Cancelado") {
     await addDoc(collection(db, CANCELAMENTO_QUEUE_COLLECTION), {
       uid: atendimento.uid,
       operator: atendimento.operator,
       operatorName: atendimento.operatorName,
+      supervisor: atendimento.supervisor,
       cancelCountOfDay: atendimento.cancelCountOfDay,
       reason: atendimento.reason,
       duration: atendimento.duration,
@@ -99,6 +101,7 @@ async function salvarDemanda(profile, payload) {
     uid: profile.uid,
     operator: profile.matricula,
     operatorName: profile.nome,
+    supervisor: profile.supervisor || "",
     demandType: payload.demandType,
     contract: payload.contract,
     date: payload.date || "",
@@ -123,15 +126,37 @@ async function listarLigacoes() {
     const data = snapshotDoc.data();
 
     return {
+      id: snapshotDoc.id,
       ...data,
       objetoData: parseStoredDate(data.date)
     };
   });
 }
 
+async function listarFila(collectionName) {
+  const snapshot = await getDocs(collection(db, collectionName));
+
+  return snapshot.docs
+    .map((snapshotDoc) => ({
+      id: snapshotDoc.id,
+      ...snapshotDoc.data()
+    }))
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+async function excluirItemFila(collectionName, id) {
+  if (!collectionName || !id) {
+    throw new Error("Não consegui identificar o item da fila.");
+  }
+
+  await deleteDoc(doc(db, collectionName, id));
+}
+
 export {
   buscarLigacoes,
+  excluirItemFila,
   getTodayId,
+  listarFila,
   listarLigacoes,
   parseStoredDate,
   salvarAtendimento,

@@ -32,19 +32,38 @@ async function ensureAdmin(serviceAccountPath) {
   }
 }
 
-async function processCancelamentos(db, webhookUrl) {
+function supervisorAllowed(itemSupervisor, filterSupervisor) {
+  if (!filterSupervisor) return true;
+  return String(itemSupervisor || "").trim().toLowerCase() === filterSupervisor.toLowerCase();
+}
+
+async function markBlockedBySupervisor(docSnap, data, filterSupervisor) {
+  await docSnap.ref.update({
+    status: "blocked_supervisor",
+    sentAt: null,
+    attempts: data.attempts || 0,
+    lastError: `Supervisor fora do filtro ativo: ${filterSupervisor}`,
+    lastAttemptAt: new Date().toISOString()
+  });
+}
+
+async function processCancelamentos(db, webhookUrl, filterSupervisor) {
   const snapshot = await db
     .collection("cancelamentoFila")
     .where("status", "==", "pending")
     .limit(20)
     .get();
 
-  if (snapshot.empty) {
-    return;
-  }
+  if (snapshot.empty) return;
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
+
+    if (!supervisorAllowed(data.supervisor, filterSupervisor)) {
+      await markBlockedBySupervisor(docSnap, data, filterSupervisor);
+      console.log(`Cancelamento bloqueado por supervisor: ${docSnap.id}`);
+      continue;
+    }
 
     try {
       const response = await fetch(webhookUrl, {
@@ -73,7 +92,7 @@ async function processCancelamentos(db, webhookUrl) {
         lastError: null
       });
 
-      console.log(`Evento enviado: ${docSnap.id}`);
+      console.log(`Cancelamento enviado: ${docSnap.id}`);
     } catch (error) {
       await docSnap.ref.update({
         attempts: (data.attempts || 0) + 1,
@@ -81,24 +100,28 @@ async function processCancelamentos(db, webhookUrl) {
         lastError: error.message
       });
 
-      console.error(`Falha ao enviar ${docSnap.id}: ${error.message}`);
+      console.error(`Falha ao enviar cancelamento ${docSnap.id}: ${error.message}`);
     }
   }
 }
 
-async function processDemandas(db, webhookUrl) {
+async function processDemandas(db, webhookUrl, filterSupervisor) {
   const snapshot = await db
     .collection("demandasFila")
     .where("status", "==", "pending")
     .limit(20)
     .get();
 
-  if (snapshot.empty) {
-    return;
-  }
+  if (snapshot.empty) return;
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
+
+    if (!supervisorAllowed(data.supervisor, filterSupervisor)) {
+      await markBlockedBySupervisor(docSnap, data, filterSupervisor);
+      console.log(`Demanda bloqueada por supervisor: ${docSnap.id}`);
+      continue;
+    }
 
     try {
       const response = await fetch(webhookUrl, {
@@ -135,9 +158,9 @@ async function processDemandas(db, webhookUrl) {
   }
 }
 
-async function processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl) {
-  await processCancelamentos(db, cancelamentoWebhookUrl);
-  await processDemandas(db, demandaWebhookUrl);
+async function processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, filterSupervisor) {
+  await processCancelamentos(db, cancelamentoWebhookUrl, filterSupervisor);
+  await processDemandas(db, demandaWebhookUrl, filterSupervisor);
 }
 
 async function main() {
@@ -152,20 +175,22 @@ async function main() {
     webhookUrl ||
     DEFAULT_DEMANDA_WEBHOOK_URL;
   const intervalMs = Number(getArgValue("--interval-ms") || DEFAULT_INTERVAL_MS);
+  const supervisorFilter = String(getArgValue("--supervisor") || "").trim();
 
   await ensureAdmin(serviceAccountPath);
   const db = getFirestore();
 
-  console.log(`Worker da fila iniciado.`);
+  console.log("Worker da fila iniciado.");
   console.log(`Webhook de cancelamento: ${cancelamentoWebhookUrl}`);
   console.log(`Webhook de demanda: ${demandaWebhookUrl}`);
+  console.log(`Supervisor filtrado: ${supervisorFilter || "todos"}`);
   console.log(`Intervalo de varredura: ${intervalMs}ms`);
 
-  await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl);
+  await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, supervisorFilter);
 
   setInterval(async () => {
     try {
-      await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl);
+      await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, supervisorFilter);
     } catch (error) {
       console.error("Erro ao processar fila:", error.message);
     }

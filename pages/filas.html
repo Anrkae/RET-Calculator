@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filas Operacionais - Claro Ret</title>
+  <link rel="stylesheet" href="../src/css/pages/gestao.css">
+</head>
+<body class="dark-theme">
+  <div id="queueLogin" class="auth-shell">
+    <div class="auth-card">
+      <h1>Filas operacionais</h1>
+      <p class="auth-copy">Entre com Almope e senha. Somente administradores podem abrir esta página.</p>
+      <p id="queueAuthFeedback" class="auth-feedback hidden"></p>
+
+      <input id="queueMatriculaInput" type="text" placeholder="Almope" autocomplete="username" inputmode="numeric">
+      <input id="queuePasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
+
+      <button id="queueLoginButton" class="primary-button" type="button">Entrar</button>
+      <a class="auth-back-link" href="./admin.html">Voltar para a gestão</a>
+    </div>
+  </div>
+
+  <div id="queueApp" class="container hidden">
+    <header class="page-header">
+      <div>
+        <h1>Filas operacionais</h1>
+        <p id="queueIdentity">Acompanhe cancelamentos e demandas em fila.</p>
+      </div>
+
+      <div class="header-actions">
+        <a class="ghost-button header-link-button" href="./admin.html">Gestão</a>
+        <button id="refreshQueuesButton" class="ghost-button" type="button">Atualizar</button>
+        <button id="queueLogoutButton" class="ghost-button" type="button">Sair</button>
+      </div>
+    </header>
+
+    <section class="panel panel-compact">
+      <div class="queue-toolbar">
+        <div class="queue-tabs">
+          <button id="showCancelamentosTab" class="table-action queue-tab is-active" type="button">Cancelamentos</button>
+          <button id="showDemandasTab" class="ghost-button queue-tab" type="button">Demandas</button>
+        </div>
+        <span id="queueSummary" class="queue-summary">Carregando fila...</span>
+      </div>
+
+      <p id="queueFeedback" class="auth-feedback hidden"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2 id="queuePanelTitle">Fila de cancelamentos</h2>
+        <span>Visualize status, supervisor e remova itens quando necessário.</span>
+      </div>
+
+      <div id="queueList" class="queue-list"></div>
+    </section>
+  </div>
+
+  <script type="module" src="../src/js/pages/filas.js"></script>
+</body>
+</html>

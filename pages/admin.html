@@ -29,6 +29,7 @@
       </div>
 
       <div class="header-actions">
+        <a class="ghost-button header-link-button" href="./filas.html">Filas</a>
         <select id="periodFilter">
           <option value="diario">Diário (Hoje)</option>
           <option value="semanal">Semanal (Mês atual)</option>
@@ -85,10 +86,13 @@
         </div>
 
         <div class="selected-user-actions">
-          <select id="selectedUserTagSelect" class="tag-select">
-            <option value="cr">cr</option>
-            <option value="adm">adm</option>
-          </select>
+          <div class="selected-user-fields">
+            <select id="selectedUserTagSelect" class="tag-select">
+              <option value="cr">cr</option>
+              <option value="adm">adm</option>
+            </select>
+            <input id="selectedUserSupervisorInput" class="tag-select" type="text" placeholder="Supervisor">
+          </div>
           <button id="saveSelectedUserButton" class="table-action" type="button">Salvar tag</button>
         </div>
       </div>

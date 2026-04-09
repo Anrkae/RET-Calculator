@@ -9,33 +9,15 @@ const {
   loadCurrentProfile,
   loginOperator,
   logoutOperator,
-  updateUserTag
+  updateUserAccess
 } = authService;
 
 function normalizeMatricula(value) {
   return String(value || "").replace(/\D/g, "").trim();
 }
 
-function setAuthFeedback(message = "", type = "error") {
-  const feedback = document.getElementById("adminAuthFeedback");
-  if (!feedback) return;
-
-  feedback.textContent = message;
-  feedback.classList.toggle("hidden", !message);
-  feedback.dataset.type = type;
-}
-
-function setUsersFeedback(message = "", type = "success") {
-  const feedback = document.getElementById("usersFeedback");
-  if (!feedback) return;
-
-  feedback.textContent = message;
-  feedback.classList.toggle("hidden", !message);
-  feedback.dataset.type = type;
-}
-
-function setSearchFeedback(message = "", type = "error") {
-  const feedback = document.getElementById("userSearchFeedback");
+function setFeedback(elementId, message = "", type = "error") {
+  const feedback = document.getElementById(elementId);
   if (!feedback) return;
 
   feedback.textContent = message;
@@ -73,8 +55,9 @@ function renderSelectedUser() {
   const meta = document.getElementById("selectedUserMeta");
   const badge = document.getElementById("selectedUserTagBadge");
   const select = document.getElementById("selectedUserTagSelect");
+  const supervisorInput = document.getElementById("selectedUserSupervisorInput");
 
-  if (!card || !name || !meta || !badge || !select) return;
+  if (!card || !name || !meta || !badge || !select || !supervisorInput) return;
 
   if (!selectedUser) {
     card.classList.add("hidden");
@@ -83,10 +66,11 @@ function renderSelectedUser() {
 
   card.classList.remove("hidden");
   name.textContent = selectedUser.nome || "Sem nome";
-  meta.textContent = `Almope ${selectedUser.matricula || "-"}`;
+  meta.textContent = `Almope ${selectedUser.matricula || "-"}${selectedUser.supervisor ? ` • Supervisor ${selectedUser.supervisor}` : ""}`;
   badge.textContent = selectedUser.tag || "cr";
   badge.dataset.tag = selectedUser.tag || "cr";
   select.value = selectedUser.tag || "cr";
+  supervisorInput.value = selectedUser.supervisor || "";
 }
 
 async function carregarDados() {
@@ -189,10 +173,10 @@ async function handleSearchUser() {
   const input = document.getElementById("userSearchInput");
   const matricula = normalizeMatricula(input?.value);
 
-  setSearchFeedback("");
+  setFeedback("userSearchFeedback", "");
 
   if (!matricula) {
-    setSearchFeedback("Digite o Almope que você quer localizar.", "error");
+    setFeedback("userSearchFeedback", "Digite o Almope que você quer localizar.", "error");
     return;
   }
 
@@ -202,17 +186,17 @@ async function handleSearchUser() {
       : await fallbackSearchUserByMatricula(matricula);
 
     if (!user) {
-      setSearchFeedback("Não encontrei um colaborador com esse Almope.", "error");
+      setFeedback("userSearchFeedback", "Não encontrei um colaborador com esse Almope.", "error");
       return;
     }
 
     selectedUser = user;
     renderSelectedUser();
     closeUserSearchModal();
-    setUsersFeedback(`Colaborador ${user.nome} carregado para edição.`, "success");
+    setFeedback("usersFeedback", `Colaborador ${user.nome} carregado para edição.`, "success");
   } catch (error) {
     console.error("Erro ao buscar colaborador:", error);
-    setSearchFeedback(error.message || "Não foi possível buscar esse colaborador agora.", "error");
+    setFeedback("userSearchFeedback", error.message || "Não foi possível buscar esse colaborador agora.", "error");
   }
 }
 
@@ -227,20 +211,27 @@ async function fallbackSearchUserByMatricula(matricula) {
 
 async function handleSaveSelectedUser() {
   const select = document.getElementById("selectedUserTagSelect");
+  const supervisorInput = document.getElementById("selectedUserSupervisorInput");
 
-  if (!selectedUser || !select) return;
+  if (!selectedUser || !select || !supervisorInput) return;
 
   try {
-    await updateUserTag(selectedUser.uid || selectedUser.id, select.value);
+    await updateUserAccess(selectedUser.uid || selectedUser.id, {
+      tag: select.value,
+      supervisor: supervisorInput.value
+    });
+
     selectedUser = {
       ...selectedUser,
-      tag: select.value
+      tag: select.value,
+      supervisor: supervisorInput.value.trim()
     };
+
     renderSelectedUser();
-    setUsersFeedback("Tag atualizada com sucesso.", "success");
+    setFeedback("usersFeedback", "Acesso atualizado com sucesso.", "success");
   } catch (error) {
-    console.error("Erro ao atualizar tag:", error);
-    setUsersFeedback(error.message || "Não foi possível atualizar a tag.", "error");
+    console.error("Erro ao atualizar acesso:", error);
+    setFeedback("usersFeedback", error.message || "Não foi possível atualizar o acesso.", "error");
   }
 }
 
@@ -248,13 +239,13 @@ async function handleAdminLogin() {
   const matricula = document.getElementById("adminMatriculaInput")?.value.trim() || "";
   const password = document.getElementById("adminPasswordInput")?.value || "";
 
-  setAuthFeedback("");
+  setFeedback("adminAuthFeedback", "");
 
   try {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setAuthFeedback("Não encontrei um acesso ativo para esse Almope.", "error");
+      setFeedback("adminAuthFeedback", "Não encontrei um acesso ativo para esse Almope.", "error");
       return;
     }
 
@@ -262,7 +253,7 @@ async function handleAdminLogin() {
 
     if (refreshedProfile?.tag !== "adm") {
       await logoutOperator();
-      setAuthFeedback("Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
+      setFeedback("adminAuthFeedback", "Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
       return;
     }
 
@@ -270,7 +261,7 @@ async function handleAdminLogin() {
     showAdminApp(currentProfile);
     await carregarDados();
   } catch (error) {
-    setAuthFeedback(error.message || "Não foi possível entrar.", "error");
+    setFeedback("adminAuthFeedback", error.message || "Não foi possível entrar.", "error");
   }
 }
 
@@ -285,7 +276,7 @@ async function initializeAdmin() {
   if (currentProfile.tag !== "adm") {
     await logoutOperator();
     showLogin();
-    setAuthFeedback("Seu acesso não tem permissão para abrir esta área administrativa.", "error");
+    setFeedback("adminAuthFeedback", "Seu acesso não tem permissão para abrir esta área administrativa.", "error");
     return;
   }
 
