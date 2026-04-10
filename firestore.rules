@@ -173,6 +173,14 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /configuracoesBot/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /supervisorGrupos/{docId} {
+      allow read, write: if isAdmin();
+    }
+
     match /atendimentos/{document=**} {
       allow read, write: if false;
     }

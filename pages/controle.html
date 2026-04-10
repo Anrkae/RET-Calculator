@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel da Ferramenta - Claro Ret</title>
+  <link rel="stylesheet" href="../src/css/pages/controle.css">
+</head>
+<body class="tool-theme">
+  <div id="toolLogin" class="tool-auth-shell">
+    <div class="tool-auth-card">
+      <span class="tool-brand-kicker">Central da ferramenta</span>
+      <h1>Painel operacional</h1>
+      <p>Entre com Almope e senha. Somente administradores podem acessar esta central.</p>
+      <p id="toolAuthFeedback" class="tool-feedback hidden"></p>
+
+      <input id="toolMatriculaInput" type="text" placeholder="Almope" autocomplete="username" inputmode="numeric">
+      <input id="toolPasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
+
+      <button id="toolLoginButton" class="primary-button" type="button">Entrar</button>
+      <a class="tool-link-inline" href="./admin.html">Voltar para a gestão</a>
+    </div>
+  </div>
+
+  <div id="toolApp" class="tool-shell hidden">
+    <aside class="tool-sidebar">
+      <div class="tool-brand">
+        <span class="tool-brand-kicker">Central de operação</span>
+        <h1>Painel da Ferramenta</h1>
+        <p>Configuração, manutenção e expansão do bot operacional.</p>
+      </div>
+
+      <nav class="tool-nav">
+        <button class="tool-nav-button is-active" type="button" data-panel-target="queues">Controle das filas</button>
+        <button class="tool-nav-button" type="button" data-panel-target="whatsapp">Conexão WhatsApp</button>
+        <button class="tool-nav-button" type="button" data-panel-target="templates">Textos padrão</button>
+        <button class="tool-nav-button" type="button" data-panel-target="settings">Configurações do bot</button>
+      </nav>
+
+      <div class="tool-sidebar-footer">
+        <a class="tool-link-button" href="./admin.html">Gestão</a>
+        <a class="tool-link-button" href="./filas.html">Filas</a>
+        <button id="toolLogoutButton" class="tool-link-button" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <main class="tool-content">
+      <header class="tool-header">
+        <div>
+          <span class="tool-header-kicker">Painel protegido</span>
+          <h2 id="toolPanelTitle">Controle das filas</h2>
+          <p id="toolIdentity" class="tool-header-copy"></p>
+        </div>
+
+        <div class="tool-header-actions">
+          <button id="refreshToolDataButton" class="ghost-button" type="button">Atualizar dados</button>
+          <button id="saveToolSettingsButton" class="primary-button hidden" type="button">Salvar alterações</button>
+        </div>
+      </header>
+
+      <p id="toolPageFeedback" class="tool-feedback hidden"></p>
+
+      <section class="tool-overview">
+        <article class="overview-card">
+          <strong id="overviewQueues">0</strong>
+          <span>Itens em fila</span>
+        </article>
+        <article class="overview-card">
+          <strong id="overviewBlocked">0</strong>
+          <span>Bloqueados</span>
+        </article>
+        <article class="overview-card">
+          <strong id="overviewGroups">0</strong>
+          <span>Grupos configurados</span>
+        </article>
+        <article class="overview-card">
+          <strong id="overviewSupervisors">0</strong>
+          <span>Supervisores mapeados</span>
+        </article>
+      </section>
+
+      <section id="panel-queues" class="tool-panel">
+        <div class="panel-intro">
+          <h3>Controle das filas</h3>
+          <p>Acompanhe rapidamente o volume das filas e use a página dedicada quando precisar agir item por item.</p>
+        </div>
+
+        <div class="tool-grid tool-grid-2">
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Fila de cancelamentos</h4>
+                <span>Itens operacionais com envio para grupo</span>
+              </div>
+              <span id="cancelamentosStatusPill" class="status-pill status-warning">0 pendentes</span>
+            </div>
+
+            <div class="queue-stats">
+              <div><strong id="cancelamentosPendentes">0</strong><span>Pendentes</span></div>
+              <div><strong id="cancelamentosBloqueados">0</strong><span>Bloqueados</span></div>
+              <div><strong id="cancelamentosEnviados">0</strong><span>Enviados</span></div>
+            </div>
+
+            <div class="tool-card-actions">
+              <a class="ghost-button tool-link-button" href="./filas.html">Abrir fila</a>
+            </div>
+          </article>
+
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Fila de demandas</h4>
+                <span>Demandas formatadas para disparo e revisão</span>
+              </div>
+              <span id="demandasStatusPill" class="status-pill status-info">0 pendentes</span>
+            </div>
+
+            <div class="queue-stats">
+              <div><strong id="demandasPendentes">0</strong><span>Pendentes</span></div>
+              <div><strong id="demandasBloqueadas">0</strong><span>Bloqueadas</span></div>
+              <div><strong id="demandasEnviadas">0</strong><span>Enviadas</span></div>
+            </div>
+
+            <div class="tool-card-actions">
+              <a class="ghost-button tool-link-button" href="./filas.html">Abrir fila</a>
+            </div>
+          </article>
+        </div>
+
+        <article class="tool-card">
+          <div class="tool-card-head">
+            <div>
+              <h4>Visão rápida de roteamento</h4>
+              <span>Prévia dos grupos ativos por supervisor responsável</span>
+            </div>
+          </div>
+
+          <div id="queueRoutingPreview" class="mapping-table">
+            <div class="mapping-row mapping-row-head">
+              <span>Supervisor</span>
+              <span>Grupo</span>
+              <span>Status</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section id="panel-whatsapp" class="tool-panel hidden">
+        <div class="panel-intro">
+          <h3>Conexão da conta de WhatsApp</h3>
+          <p>Protótipo visual da área que vai concentrar status da sessão, QR Code e saúde da conta do bot.</p>
+        </div>
+
+        <div class="tool-grid tool-grid-2">
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Status da sessão</h4>
+                <span>Conta que dispara mensagens operacionais</span>
+              </div>
+              <span class="status-pill status-success">Conectado</span>
+            </div>
+
+            <div class="meta-list">
+              <div><span>Instância</span><strong>equipe-ret</strong></div>
+              <div><span>Último pareamento</span><strong>09/04/2026 • 09:12</strong></div>
+              <div><span>Conta</span><strong>Bot Claro Ret</strong></div>
+            </div>
+
+            <div class="tool-card-actions">
+              <button class="ghost-button" type="button">Atualizar status</button>
+              <button class="primary-button compact-action" type="button">Gerar QR Code</button>
+            </div>
+          </article>
+
+          <article class="tool-card qr-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>QR Code de conexão</h4>
+                <span>Espaço reservado para a reconexão do bot</span>
+              </div>
+            </div>
+
+            <div class="qr-placeholder">
+              <div class="qr-skeleton"></div>
+              <strong>QR indisponível neste passo</strong>
+              <span>Vamos ligar essa parte ao WPPConnect em uma etapa separada.</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="panel-templates" class="tool-panel hidden">
+        <div class="panel-intro">
+          <h3>Textos padrão</h3>
+          <p>Protótipo visual da biblioteca de mensagens para cancelamentos e demandas.</p>
+        </div>
+
+        <div class="tool-grid tool-grid-2">
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Cancelamentos</h4>
+                <span>Mensagem disparada automaticamente no grupo</span>
+              </div>
+            </div>
+
+            <textarea class="tool-textarea" rows="8">*1° Cancelamento de Fulano* ❌
+
+🗒️ *Motivo:* Mudança de endereço</textarea>
+          </article>
+
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Demandas</h4>
+                <span>Blocos usados para Encaixe VT, Retirar Ponto e Suspensão</span>
+              </div>
+            </div>
+
+            <textarea class="tool-textarea" rows="8">📌 *Fulano* - *Encaixe VT*
+
+📄 *000/123456789*
+📅 *10/04/2026* - *das 14h às 17h*
+👨🏾‍🔧 *Área X* - *Classe Y*</textarea>
+          </article>
+        </div>
+      </section>
+
+      <section id="panel-settings" class="tool-panel hidden">
+        <div class="panel-intro">
+          <h3>Configurações do bot</h3>
+          <p>Essa parte já está funcional para parâmetros base e mapeamento supervisor → grupo.</p>
+        </div>
+
+        <div class="tool-grid tool-grid-2">
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Parâmetros globais</h4>
+                <span>Configurações estruturais do worker e do bot</span>
+              </div>
+            </div>
+
+            <div class="tool-form-grid">
+              <label class="tool-field">
+                <span>Intervalo do worker</span>
+                <input id="settingsWorkerInterval" type="text" placeholder="5000">
+              </label>
+              <label class="tool-field">
+                <span>Grupo padrão de fallback</span>
+                <input id="settingsFallbackGroup" type="text" placeholder="1203...@g.us">
+              </label>
+              <label class="tool-field">
+                <span>Webhook de cancelamento</span>
+                <input id="settingsCancelamentoWebhook" type="text">
+              </label>
+              <label class="tool-field">
+                <span>Webhook de demanda</span>
+                <input id="settingsDemandaWebhook" type="text">
+              </label>
+              <label class="tool-field">
+                <span>Base do WPPConnect</span>
+                <input id="settingsWppconnectBaseUrl" type="text">
+              </label>
+              <label class="tool-field">
+                <span>Base do n8n</span>
+                <input id="settingsN8nBaseUrl" type="text">
+              </label>
+            </div>
+          </article>
+
+          <article class="tool-card">
+            <div class="tool-card-head">
+              <div>
+                <h4>Resumo operacional</h4>
+                <span>Último estado salvo para a ferramenta</span>
+              </div>
+            </div>
+
+            <div class="meta-list">
+              <div><span>Última atualização</span><strong id="settingsUpdatedAt">-</strong></div>
+              <div><span>Supervisores configurados</span><strong id="settingsSupervisorCount">0</strong></div>
+              <div><span>Roteamento com grupo ativo</span><strong id="settingsGroupCount">0</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <article class="tool-card">
+          <div class="tool-card-head">
+            <div>
+              <h4>Mapeamento supervisor → grupo</h4>
+              <span>Defina qual grupo deve receber as mensagens de cada supervisor.</span>
+            </div>
+            <button id="addSupervisorMappingButton" class="ghost-button" type="button">Adicionar mapeamento</button>
+          </div>
+
+          <div class="mapping-table">
+            <div class="mapping-row mapping-row-head">
+              <span>Supervisor</span>
+              <span>ID do grupo</span>
+              <span>Ativo</span>
+              <span>Observação</span>
+              <span>Ação</span>
+            </div>
+            <div id="supervisorMappingsList" class="mapping-stack"></div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="../src/js/pages/controle.js"></script>
+</body>
+</html>
