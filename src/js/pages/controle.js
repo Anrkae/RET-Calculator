@@ -11,6 +11,13 @@ import {
   saveBotSettings,
   updateSupervisorGroupMapping
 } from "../services/controle-service.js";
+import {
+  checkSessionConnection,
+  extractConnectionStatus,
+  extractQrCode,
+  getQrCodeSession,
+  startSession
+} from "../services/wppconnect-service.js";
 import { listarFila } from "../services/atendimentos-service.js";
 
 const panelTitles = {
@@ -28,6 +35,8 @@ const SETTINGS_FIELD_IDS = [
   "settingsCancelamentoWebhook",
   "settingsDemandaWebhook",
   "settingsWppconnectBaseUrl",
+  "settingsWppconnectSessionName",
+  "settingsWppconnectBearerToken",
   "settingsN8nBaseUrl"
 ];
 
@@ -46,6 +55,8 @@ function normalizeSettings(settings = {}) {
     cancelamentoWebhookPath: String(settings.cancelamentoWebhookPath || "").trim(),
     demandaWebhookPath: String(settings.demandaWebhookPath || "").trim(),
     wppconnectBaseUrl: String(settings.wppconnectBaseUrl || "").trim(),
+    wppconnectSessionName: String(settings.wppconnectSessionName || "").trim(),
+    wppconnectBearerToken: String(settings.wppconnectBearerToken || "").trim(),
     n8nBaseUrl: String(settings.n8nBaseUrl || "").trim()
   };
 }
@@ -67,7 +78,17 @@ function readCurrentSettingsForm() {
     cancelamentoWebhookPath: document.getElementById("settingsCancelamentoWebhook")?.value.trim() || "",
     demandaWebhookPath: document.getElementById("settingsDemandaWebhook")?.value.trim() || "",
     wppconnectBaseUrl: document.getElementById("settingsWppconnectBaseUrl")?.value.trim() || "",
+    wppconnectSessionName: document.getElementById("settingsWppconnectSessionName")?.value.trim() || "",
+    wppconnectBearerToken: document.getElementById("settingsWppconnectBearerToken")?.value.trim() || "",
     n8nBaseUrl: document.getElementById("settingsN8nBaseUrl")?.value.trim() || ""
+  };
+}
+
+function getWhatsappConfig() {
+  return {
+    baseUrl: botSettings?.wppconnectBaseUrl || "",
+    sessionName: botSettings?.wppconnectSessionName || "",
+    token: botSettings?.wppconnectBearerToken || ""
   };
 }
 
@@ -118,6 +139,60 @@ function setAuthFeedback(message = "", type = "error") {
   feedback.dataset.type = type;
 }
 
+function setWhatsappFeedback(message = "", type = "error") {
+  const feedback = document.getElementById("whatsappFeedback");
+  if (!feedback) return;
+
+  feedback.textContent = message;
+  feedback.classList.toggle("hidden", !message);
+  feedback.dataset.type = type;
+}
+
+function renderWhatsappShell() {
+  const config = getWhatsappConfig();
+
+  document.getElementById("whatsappSessionName").textContent = config.sessionName || "Nao definido";
+  document.getElementById("whatsappBaseUrl").textContent = config.baseUrl || "Nao definido";
+}
+
+function renderWhatsappStatus(connected = false, statusText = "Nao verificado") {
+  const pill = document.getElementById("whatsappStatusPill");
+  const status = document.getElementById("whatsappSessionStatus");
+
+  if (pill) {
+    pill.textContent = statusText;
+    pill.className = `status-pill ${connected ? "status-success" : "status-warning"}`;
+  }
+
+  if (status) {
+    status.textContent = statusText;
+  }
+}
+
+function renderQrCode(imageSource = "", title = "QR indisponivel", copy = "Use o botao para consultar um QR Code novo quando a sessao precisar reconectar.") {
+  const image = document.getElementById("whatsappQrImage");
+  const titleElement = document.getElementById("whatsappQrTitle");
+  const copyElement = document.getElementById("whatsappQrCopy");
+
+  if (titleElement) {
+    titleElement.textContent = title;
+  }
+
+  if (copyElement) {
+    copyElement.textContent = copy;
+  }
+
+  if (!image) return;
+
+  if (imageSource) {
+    image.src = imageSource;
+    image.classList.remove("hidden");
+  } else {
+    image.removeAttribute("src");
+    image.classList.add("hidden");
+  }
+}
+
 function applySidebarState() {
   const shell = document.getElementById("toolApp");
   const toggleButton = document.getElementById("toggleToolSidebarButton");
@@ -127,6 +202,56 @@ function applySidebarState() {
   shell.classList.toggle("is-collapsed", isSidebarCollapsed);
   toggleButton.setAttribute("aria-expanded", String(!isSidebarCollapsed));
   toggleButton.setAttribute("aria-label", isSidebarCollapsed ? "Expandir menu" : "Minimizar menu");
+}
+
+async function refreshWhatsappStatus() {
+  renderWhatsappShell();
+
+  try {
+    const response = await checkSessionConnection(getWhatsappConfig());
+    const parsed = extractConnectionStatus(response);
+    renderWhatsappStatus(parsed.connected, parsed.statusText);
+    setWhatsappFeedback("Status da sessao atualizado.", "success");
+  } catch (error) {
+    renderWhatsappStatus(false, "Falha na consulta");
+    setWhatsappFeedback(error.message || "Nao foi possivel consultar o status da sessao.", "error");
+  }
+}
+
+async function handleStartWhatsappSession() {
+  try {
+    setWhatsappFeedback("Iniciando sessao do bot...", "success");
+    const response = await startSession(getWhatsappConfig());
+    const qrCode = extractQrCode(response);
+
+    if (qrCode) {
+      renderQrCode(qrCode, "QR Code pronto", "Leia este QR Code no WhatsApp para reconectar a sessao.");
+    }
+
+    await refreshWhatsappStatus();
+    setWhatsappFeedback("Sessao iniciada. Se necessario, use ou escaneie o QR Code exibido.", "success");
+  } catch (error) {
+    setWhatsappFeedback(error.message || "Nao foi possivel iniciar a sessao do bot.", "error");
+  }
+}
+
+async function handleGenerateWhatsappQr() {
+  try {
+    setWhatsappFeedback("Consultando QR Code da sessao...", "success");
+    const response = await getQrCodeSession(getWhatsappConfig());
+    const qrCode = extractQrCode(response);
+
+    if (!qrCode) {
+      renderQrCode("", "QR nao encontrado", "A API respondeu, mas nao retornou uma imagem de QR Code nesta consulta.");
+      setWhatsappFeedback("Nao encontrei um QR Code valido nesta resposta.", "error");
+      return;
+    }
+
+    renderQrCode(qrCode, "QR Code pronto", "Leia este QR Code no WhatsApp para reconectar a sessao.");
+    setWhatsappFeedback("QR Code atualizado com sucesso.", "success");
+  } catch (error) {
+    setWhatsappFeedback(error.message || "Nao foi possivel obter o QR Code da sessao.", "error");
+  }
 }
 
 function setActivePanel(target) {
@@ -149,6 +274,10 @@ function setActivePanel(target) {
   }
 
   syncSaveButtonState();
+
+  if (target === "whatsapp") {
+    renderWhatsappShell();
+  }
 }
 
 function showToolApp(profile) {
@@ -176,12 +305,16 @@ function renderBotSettings() {
   document.getElementById("settingsCancelamentoWebhook").value = botSettings.cancelamentoWebhookPath || "";
   document.getElementById("settingsDemandaWebhook").value = botSettings.demandaWebhookPath || "";
   document.getElementById("settingsWppconnectBaseUrl").value = botSettings.wppconnectBaseUrl || "";
+  document.getElementById("settingsWppconnectSessionName").value = botSettings.wppconnectSessionName || "";
+  document.getElementById("settingsWppconnectBearerToken").value = botSettings.wppconnectBearerToken || "";
   document.getElementById("settingsN8nBaseUrl").value = botSettings.n8nBaseUrl || "";
   document.getElementById("settingsUpdatedAt").textContent = botSettings.updatedAt || "Ainda nao salvo";
   document.getElementById("settingsSupervisorCount").textContent = String(supervisorGroups.length);
   document.getElementById("settingsGroupCount").textContent = String(
     supervisorGroups.filter((item) => item.enabled && item.groupId).length
   );
+
+  renderWhatsappShell();
 }
 
 function renderSupervisorMappings() {
@@ -306,6 +439,8 @@ async function loadControlData() {
 
   renderSupervisorMappings();
   renderBotSettings();
+  renderWhatsappStatus(false, "Nao verificado");
+  renderQrCode();
   await refreshOverview();
   syncSaveButtonState();
 }
@@ -427,6 +562,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const addMappingButton = document.getElementById("addSupervisorMappingButton");
   const mappingsList = document.getElementById("supervisorMappingsList");
   const sidebarToggleButton = document.getElementById("toggleToolSidebarButton");
+  const refreshWhatsappStatusButton = document.getElementById("refreshWhatsappStatusButton");
+  const startWhatsappSessionButton = document.getElementById("startWhatsappSessionButton");
+  const generateWhatsappQrButton = document.getElementById("generateWhatsappQrButton");
 
   document.querySelectorAll("[data-panel-target]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -454,13 +592,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   saveButton?.addEventListener("click", handleSaveSettings);
   refreshButton?.addEventListener("click", async () => {
     setFeedback("");
+    setWhatsappFeedback("");
     await loadControlData();
+    if (activePanel === "whatsapp") {
+      await refreshWhatsappStatus();
+    }
   });
 
   sidebarToggleButton?.addEventListener("click", () => {
     isSidebarCollapsed = !isSidebarCollapsed;
     applySidebarState();
   });
+
+  refreshWhatsappStatusButton?.addEventListener("click", refreshWhatsappStatus);
+  startWhatsappSessionButton?.addEventListener("click", handleStartWhatsappSession);
+  generateWhatsappQrButton?.addEventListener("click", handleGenerateWhatsappQr);
 
   addMappingButton?.addEventListener("click", addSupervisorMappingRow);
   mappingsList?.addEventListener("click", (event) => {

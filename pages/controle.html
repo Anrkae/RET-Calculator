@@ -174,7 +174,7 @@
       <section id="panel-whatsapp" class="tool-panel hidden">
         <div class="panel-intro">
           <h3>Conexao da conta de WhatsApp</h3>
-          <p>Prototipo visual da area que vai concentrar status da sessao, QR Code e saude da conta do bot.</p>
+          <p>Acompanhe o estado da sessao do bot, atualize a conexao e gere um novo QR Code quando necessario.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
@@ -184,18 +184,21 @@
                 <h4>Status da sessao</h4>
                 <span>Conta que dispara mensagens operacionais</span>
               </div>
-              <span class="status-pill status-success">Conectado</span>
+              <span id="whatsappStatusPill" class="status-pill status-warning">Nao verificado</span>
             </div>
 
             <div class="meta-list">
-              <div><span>Instancia</span><strong>equipe-ret</strong></div>
-              <div><span>Ultimo pareamento</span><strong>09/04/2026 • 09:12</strong></div>
-              <div><span>Conta</span><strong>Bot Claro Ret</strong></div>
+              <div><span>Instancia</span><strong id="whatsappSessionName">-</strong></div>
+              <div><span>Status</span><strong id="whatsappSessionStatus">Aguardando consulta</strong></div>
+              <div><span>Base WPPConnect</span><strong id="whatsappBaseUrl">-</strong></div>
             </div>
 
+            <p id="whatsappFeedback" class="tool-feedback hidden"></p>
+
             <div class="tool-card-actions">
-              <button class="ghost-button" type="button">Atualizar status</button>
-              <button class="primary-button compact-action" type="button">Gerar QR Code</button>
+              <button id="refreshWhatsappStatusButton" class="ghost-button" type="button">Atualizar status</button>
+              <button id="startWhatsappSessionButton" class="ghost-button compact-action" type="button">Iniciar sessao</button>
+              <button id="generateWhatsappQrButton" class="primary-button compact-action" type="button">Gerar QR Code</button>
             </div>
           </article>
 
@@ -207,10 +210,11 @@
               </div>
             </div>
 
-            <div class="qr-placeholder">
+            <div id="whatsappQrPlaceholder" class="qr-placeholder">
               <div class="qr-skeleton"></div>
-              <strong>QR indisponivel neste passo</strong>
-              <span>Vamos ligar essa parte ao WPPConnect em uma etapa separada.</span>
+              <strong id="whatsappQrTitle">QR indisponivel</strong>
+              <span id="whatsappQrCopy">Use o botao para consultar um QR Code novo quando a sessao precisar reconectar.</span>
+              <img id="whatsappQrImage" class="whatsapp-qr-image hidden" alt="QR Code do bot">
             </div>
           </article>
         </div>
@@ -288,6 +292,14 @@
               <label class="tool-field">
                 <span>Base do WPPConnect</span>
                 <input id="settingsWppconnectBaseUrl" type="text">
+              </label>
+              <label class="tool-field">
+                <span>Nome da sessao WPP</span>
+                <input id="settingsWppconnectSessionName" type="text" placeholder="equipe-ret">
+              </label>
+              <label class="tool-field tool-field-full">
+                <span>Bearer token WPP</span>
+                <input id="settingsWppconnectBearerToken" type="password" placeholder="equipe-ret:$2b$10$...">
               </label>
               <label class="tool-field">
                 <span>Base do n8n</span>

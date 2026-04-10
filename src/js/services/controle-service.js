@@ -20,6 +20,8 @@ function defaultBotSettings() {
     cancelamentoWebhookPath: "/webhook/cancelamento-whatsapp",
     demandaWebhookPath: "/webhook/demanda-whatsapp",
     wppconnectBaseUrl: "http://localhost:21465",
+    wppconnectSessionName: "equipe-ret",
+    wppconnectBearerToken: "",
     n8nBaseUrl: "http://localhost:5678",
     updatedAt: ""
   };
