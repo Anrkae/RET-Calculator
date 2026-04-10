@@ -15,40 +15,89 @@ import { listarFila } from "../services/atendimentos-service.js";
 
 const panelTitles = {
   queues: "Controle das filas",
-  whatsapp: "Conexão WhatsApp",
-  templates: "Textos padrão",
-  settings: "Configurações do bot"
+  whatsapp: "Conexao WhatsApp",
+  templates: "Textos padrao",
+  settings: "Configuracoes do bot"
 };
 
 const CANCELAMENTO_COLLECTION = "cancelamentoFila";
 const DEMANDA_COLLECTION = "demandasFila";
+const SETTINGS_FIELD_IDS = [
+  "settingsWorkerInterval",
+  "settingsFallbackGroup",
+  "settingsCancelamentoWebhook",
+  "settingsDemandaWebhook",
+  "settingsWppconnectBaseUrl",
+  "settingsN8nBaseUrl"
+];
 
 let currentProfile = null;
 let botSettings = null;
 let supervisorGroups = [];
 let deletedMappingIds = [];
+let activePanel = "queues";
+let isSidebarCollapsed = false;
+let hasUnsavedChanges = false;
 
-function setActivePanel(target) {
-  const buttons = document.querySelectorAll("[data-panel-target]");
-  const sections = document.querySelectorAll(".tool-panel");
-  const title = document.getElementById("toolPanelTitle");
+function normalizeSettings(settings = {}) {
+  return {
+    workerIntervalMs: String(settings.workerIntervalMs || "").trim(),
+    fallbackGroupId: String(settings.fallbackGroupId || "").trim(),
+    cancelamentoWebhookPath: String(settings.cancelamentoWebhookPath || "").trim(),
+    demandaWebhookPath: String(settings.demandaWebhookPath || "").trim(),
+    wppconnectBaseUrl: String(settings.wppconnectBaseUrl || "").trim(),
+    n8nBaseUrl: String(settings.n8nBaseUrl || "").trim()
+  };
+}
+
+function normalizeMappings(mappings = []) {
+  return mappings.map((item) => ({
+    id: String(item.id || "").trim(),
+    supervisor: String(item.supervisor || "").trim(),
+    groupId: String(item.groupId || "").trim(),
+    enabled: Boolean(item.enabled),
+    notes: String(item.notes || "").trim()
+  }));
+}
+
+function readCurrentSettingsForm() {
+  return {
+    workerIntervalMs: document.getElementById("settingsWorkerInterval")?.value.trim() || "",
+    fallbackGroupId: document.getElementById("settingsFallbackGroup")?.value.trim() || "",
+    cancelamentoWebhookPath: document.getElementById("settingsCancelamentoWebhook")?.value.trim() || "",
+    demandaWebhookPath: document.getElementById("settingsDemandaWebhook")?.value.trim() || "",
+    wppconnectBaseUrl: document.getElementById("settingsWppconnectBaseUrl")?.value.trim() || "",
+    n8nBaseUrl: document.getElementById("settingsN8nBaseUrl")?.value.trim() || ""
+  };
+}
+
+function getSavedSnapshot() {
+  return JSON.stringify({
+    settings: normalizeSettings(botSettings || {}),
+    mappings: normalizeMappings(supervisorGroups),
+    deletedMappingIds: []
+  });
+}
+
+function getCurrentSnapshot() {
+  return JSON.stringify({
+    settings: normalizeSettings(readCurrentSettingsForm()),
+    mappings: normalizeMappings(supervisorGroups),
+    deletedMappingIds: [...deletedMappingIds].sort()
+  });
+}
+
+function syncSaveButtonState() {
   const saveButton = document.getElementById("saveToolSettingsButton");
+  if (!saveButton) return;
 
-  buttons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.panelTarget === target);
-  });
+  saveButton.classList.toggle("hidden", activePanel !== "settings");
+  saveButton.disabled = activePanel !== "settings" || !hasUnsavedChanges;
+}
 
-  sections.forEach((section) => {
-    section.classList.toggle("hidden", section.id !== `panel-${target}`);
-  });
-
-  if (title) {
-    title.textContent = panelTitles[target] || "Painel da ferramenta";
-  }
-
-  if (saveButton) {
-    saveButton.classList.toggle("hidden", target !== "settings");
-  }
+function recalculateDirtyState() {
+  hasUnsavedChanges = getCurrentSnapshot() !== getSavedSnapshot();
+  syncSaveButtonState();
 }
 
 function setFeedback(message = "", type = "error") {
@@ -69,6 +118,39 @@ function setAuthFeedback(message = "", type = "error") {
   feedback.dataset.type = type;
 }
 
+function applySidebarState() {
+  const shell = document.getElementById("toolApp");
+  const toggleButton = document.getElementById("toggleToolSidebarButton");
+
+  if (!shell || !toggleButton) return;
+
+  shell.classList.toggle("is-collapsed", isSidebarCollapsed);
+  toggleButton.setAttribute("aria-expanded", String(!isSidebarCollapsed));
+  toggleButton.setAttribute("aria-label", isSidebarCollapsed ? "Expandir menu" : "Minimizar menu");
+}
+
+function setActivePanel(target) {
+  activePanel = target;
+
+  const buttons = document.querySelectorAll("[data-panel-target]");
+  const sections = document.querySelectorAll(".tool-panel");
+  const title = document.getElementById("toolPanelTitle");
+
+  buttons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.panelTarget === target);
+  });
+
+  sections.forEach((section) => {
+    section.classList.toggle("hidden", section.id !== `panel-${target}`);
+  });
+
+  if (title) {
+    title.textContent = panelTitles[target] || "Painel da ferramenta";
+  }
+
+  syncSaveButtonState();
+}
+
 function showToolApp(profile) {
   document.getElementById("toolLogin")?.classList.add("hidden");
   document.getElementById("toolApp")?.classList.remove("hidden");
@@ -77,6 +159,8 @@ function showToolApp(profile) {
   if (identity) {
     identity.textContent = `${profile.nome} • ${profile.matricula}`;
   }
+
+  applySidebarState();
 }
 
 function showLogin() {
@@ -93,7 +177,7 @@ function renderBotSettings() {
   document.getElementById("settingsDemandaWebhook").value = botSettings.demandaWebhookPath || "";
   document.getElementById("settingsWppconnectBaseUrl").value = botSettings.wppconnectBaseUrl || "";
   document.getElementById("settingsN8nBaseUrl").value = botSettings.n8nBaseUrl || "";
-  document.getElementById("settingsUpdatedAt").textContent = botSettings.updatedAt || "Ainda não salvo";
+  document.getElementById("settingsUpdatedAt").textContent = botSettings.updatedAt || "Ainda nao salvo";
   document.getElementById("settingsSupervisorCount").textContent = String(supervisorGroups.length);
   document.getElementById("settingsGroupCount").textContent = String(
     supervisorGroups.filter((item) => item.enabled && item.groupId).length
@@ -134,7 +218,7 @@ function renderSupervisorMappings() {
         <input type="checkbox" ${item.enabled ? "checked" : ""} data-mapping-field="enabled">
         Ativo
       </label>
-      <input type="text" value="${item.notes || ""}" placeholder="Observação" data-mapping-field="notes">
+      <input type="text" value="${item.notes || ""}" placeholder="Observacao" data-mapping-field="notes">
       <button class="ghost-button small-action" type="button" data-delete-mapping="${index}">Remover</button>
     </div>
   `).join("");
@@ -148,7 +232,7 @@ function renderSupervisorMappings() {
     ${supervisorGroups.map((item) => `
       <div class="mapping-row">
         <span>${item.supervisor || "-"}</span>
-        <span>${item.groupId || "Não configurado"}</span>
+        <span>${item.groupId || "Nao configurado"}</span>
         <span class="status-pill ${item.enabled ? "status-success" : "status-warning"}">${item.enabled ? "Ativo" : "Inativo"}</span>
       </div>
     `).join("")}
@@ -157,27 +241,15 @@ function renderSupervisorMappings() {
   renderBotSettings();
 }
 
-function readCurrentSettingsForm() {
-  return {
-    workerIntervalMs: document.getElementById("settingsWorkerInterval")?.value.trim() || "",
-    fallbackGroupId: document.getElementById("settingsFallbackGroup")?.value.trim() || "",
-    cancelamentoWebhookPath: document.getElementById("settingsCancelamentoWebhook")?.value.trim() || "",
-    demandaWebhookPath: document.getElementById("settingsDemandaWebhook")?.value.trim() || "",
-    wppconnectBaseUrl: document.getElementById("settingsWppconnectBaseUrl")?.value.trim() || "",
-    n8nBaseUrl: document.getElementById("settingsN8nBaseUrl")?.value.trim() || ""
-  };
-}
-
 function attachMappingsToState() {
   const rows = document.querySelectorAll(".mapping-editable");
 
   supervisorGroups = Array.from(rows).map((row, index) => {
-    const id = row.dataset.mappingId || "";
     const current = supervisorGroups[index] || {};
 
     return {
       ...current,
-      id,
+      id: row.dataset.mappingId || "",
       supervisor: row.querySelector('[data-mapping-field="supervisor"]')?.value.trim() || "",
       groupId: row.querySelector('[data-mapping-field="groupId"]')?.value.trim() || "",
       enabled: Boolean(row.querySelector('[data-mapping-field="enabled"]')?.checked),
@@ -230,9 +302,12 @@ async function loadControlData() {
   botSettings = settings;
   supervisorGroups = mappings;
   deletedMappingIds = [];
+  hasUnsavedChanges = false;
+
   renderSupervisorMappings();
   renderBotSettings();
   await refreshOverview();
+  syncSaveButtonState();
 }
 
 async function handleSaveSettings() {
@@ -262,10 +337,10 @@ async function handleSaveSettings() {
     }
 
     await loadControlData();
-    setFeedback("Configurações do bot salvas com sucesso.", "success");
+    setFeedback("Configuracoes do bot salvas com sucesso.", "success");
   } catch (error) {
-    console.error("Erro ao salvar configurações do bot:", error);
-    setFeedback(error.message || "Não foi possível salvar as configurações agora.", "error");
+    console.error("Erro ao salvar configuracoes do bot:", error);
+    setFeedback(error.message || "Nao foi possivel salvar as configuracoes agora.", "error");
   }
 }
 
@@ -279,6 +354,7 @@ function addSupervisorMappingRow() {
     notes: ""
   });
   renderSupervisorMappings();
+  recalculateDirtyState();
 }
 
 function removeSupervisorMapping(index) {
@@ -289,6 +365,7 @@ function removeSupervisorMapping(index) {
   }
   supervisorGroups.splice(index, 1);
   renderSupervisorMappings();
+  recalculateDirtyState();
 }
 
 async function handleAdminLogin() {
@@ -301,7 +378,7 @@ async function handleAdminLogin() {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setAuthFeedback("Não encontrei um acesso ativo para esse Almope.", "error");
+      setAuthFeedback("Nao encontrei um acesso ativo para esse Almope.", "error");
       return;
     }
 
@@ -309,7 +386,7 @@ async function handleAdminLogin() {
 
     if (refreshedProfile?.tag !== "adm") {
       await logoutOperator();
-      setAuthFeedback("Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
+      setAuthFeedback("Seu acesso foi reconhecido, mas esta area e exclusiva para administradores.", "error");
       return;
     }
 
@@ -317,7 +394,7 @@ async function handleAdminLogin() {
     showToolApp(currentProfile);
     await loadControlData();
   } catch (error) {
-    setAuthFeedback(error.message || "Não foi possível entrar.", "error");
+    setAuthFeedback(error.message || "Nao foi possivel entrar.", "error");
   }
 }
 
@@ -332,7 +409,7 @@ async function initializeControlPage() {
   if (currentProfile.tag !== "adm") {
     await logoutOperator();
     showLogin();
-    setAuthFeedback("Seu acesso não tem permissão para abrir esta área.", "error");
+    setAuthFeedback("Seu acesso nao tem permissao para abrir esta area.", "error");
     return;
   }
 
@@ -349,6 +426,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const refreshButton = document.getElementById("refreshToolDataButton");
   const addMappingButton = document.getElementById("addSupervisorMappingButton");
   const mappingsList = document.getElementById("supervisorMappingsList");
+  const sidebarToggleButton = document.getElementById("toggleToolSidebarButton");
 
   document.querySelectorAll("[data-panel-target]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -378,12 +456,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     setFeedback("");
     await loadControlData();
   });
+
+  sidebarToggleButton?.addEventListener("click", () => {
+    isSidebarCollapsed = !isSidebarCollapsed;
+    applySidebarState();
+  });
+
   addMappingButton?.addEventListener("click", addSupervisorMappingRow);
   mappingsList?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-delete-mapping]");
     if (!button) return;
     removeSupervisorMapping(Number(button.dataset.deleteMapping));
   });
+  mappingsList?.addEventListener("input", () => {
+    attachMappingsToState();
+    recalculateDirtyState();
+  });
+  mappingsList?.addEventListener("change", () => {
+    attachMappingsToState();
+    recalculateDirtyState();
+  });
 
+  SETTINGS_FIELD_IDS.forEach((fieldId) => {
+    document.getElementById(fieldId)?.addEventListener("input", recalculateDirtyState);
+    document.getElementById(fieldId)?.addEventListener("change", recalculateDirtyState);
+  });
+
+  applySidebarState();
+  setActivePanel(activePanel);
+  syncSaveButtonState();
   await initializeControlPage();
 });

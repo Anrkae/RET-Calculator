@@ -96,6 +96,11 @@ textarea {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns .22s ease;
+}
+
+.tool-shell.is-collapsed {
+  grid-template-columns: 92px minmax(0, 1fr);
 }
 
 .tool-sidebar {
@@ -106,6 +111,39 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 28px;
+  position: relative;
+}
+
+.tool-sidebar-toggle {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tool-sidebar-toggle-bar {
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  transition: transform .18s ease;
+}
+
+.tool-shell.is-collapsed .tool-sidebar-toggle-bar:first-child {
+  transform: rotate(35deg) translateY(2px);
+}
+
+.tool-shell.is-collapsed .tool-sidebar-toggle-bar:last-child {
+  transform: rotate(-35deg) translateY(-2px);
 }
 
 .tool-brand-kicker,
@@ -131,6 +169,28 @@ textarea {
   margin-top: 10px;
   font-size: 28px;
   line-height: 1.1;
+}
+
+.tool-shell.is-collapsed .tool-brand h1,
+.tool-shell.is-collapsed .tool-brand p,
+.tool-shell.is-collapsed .tool-brand-kicker,
+.tool-shell.is-collapsed .tool-link-button:not(#toolLogoutButton) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tool-shell.is-collapsed .tool-sidebar {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.tool-shell.is-collapsed .tool-nav-button {
+  min-height: 50px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .tool-brand p,
@@ -192,6 +252,10 @@ textarea {
   width: 100%;
 }
 
+.compact-link-button {
+  width: auto;
+}
+
 .tool-content {
   padding: 28px;
   display: flex;
@@ -240,6 +304,13 @@ textarea {
 .table-action:hover,
 .tool-link-button:hover {
   transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .primary-button,

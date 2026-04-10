@@ -6,6 +6,9 @@ import { getFirestore } from "firebase-admin/firestore";
 const DEFAULT_CANCELAMENTO_WEBHOOK_URL = "http://localhost:5678/webhook/cancelamento-whatsapp";
 const DEFAULT_DEMANDA_WEBHOOK_URL = "http://localhost:5678/webhook/demanda-whatsapp";
 const DEFAULT_INTERVAL_MS = 5000;
+const BOT_SETTINGS_COLLECTION = "configuracoesBot";
+const BOT_SETTINGS_DOC = "default";
+const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
 
 function getArgValue(flag) {
   const index = process.argv.indexOf(flag);
@@ -32,22 +35,112 @@ async function ensureAdmin(serviceAccountPath) {
   }
 }
 
-function supervisorAllowed(itemSupervisor, filterSupervisor) {
-  if (!filterSupervisor) return true;
-  return String(itemSupervisor || "").trim().toLowerCase() === filterSupervisor.toLowerCase();
+function normalizeUrl(baseUrl, path, fallbackUrl) {
+  const normalizedBase = String(baseUrl || "").trim().replace(/\/+$/, "");
+  const normalizedPath = String(path || "").trim();
+
+  if (!normalizedBase || !normalizedPath) {
+    return fallbackUrl;
+  }
+
+  if (/^https?:\/\//i.test(normalizedPath)) {
+    return normalizedPath;
+  }
+
+  const safePath = normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`;
+  return `${normalizedBase}${safePath}`;
 }
 
-async function markBlockedBySupervisor(docSnap, data, filterSupervisor) {
+function normalizeSupervisor(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function loadRuntimeConfig(db) {
+  const [settingsSnap, mappingsSnap] = await Promise.all([
+    db.collection(BOT_SETTINGS_COLLECTION).doc(BOT_SETTINGS_DOC).get(),
+    db.collection(SUPERVISOR_GROUPS_COLLECTION).get()
+  ]);
+
+  const settings = settingsSnap.exists ? settingsSnap.data() : {};
+  const mappings = mappingsSnap.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
+
+  return {
+    settings,
+    mappings
+  };
+}
+
+function resolveRouting(data, runtimeConfig, cliOptions) {
+  const supervisor = String(data.supervisor || "").trim();
+  const normalizedItemSupervisor = normalizeSupervisor(supervisor);
+  const normalizedCliSupervisor = normalizeSupervisor(cliOptions.supervisorFilter);
+
+  if (normalizedCliSupervisor && normalizedItemSupervisor !== normalizedCliSupervisor) {
+    return {
+      allowed: false,
+      reason: `Supervisor fora do filtro ativo: ${cliOptions.supervisorFilter}`
+    };
+  }
+
+  const mapping = runtimeConfig.mappings.find((item) => {
+    return Boolean(item.enabled) && normalizeSupervisor(item.supervisor) === normalizedItemSupervisor;
+  });
+
+  if (mapping?.groupId) {
+    return {
+      allowed: true,
+      groupId: String(mapping.groupId).trim(),
+      routingMode: "supervisor_group"
+    };
+  }
+
+  const fallbackGroupId =
+    String(cliOptions.fallbackGroupId || runtimeConfig.settings.fallbackGroupId || "").trim();
+
+  if (fallbackGroupId) {
+    return {
+      allowed: true,
+      groupId: fallbackGroupId,
+      routingMode: "fallback_group"
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: supervisor
+      ? `Nenhum grupo configurado para o supervisor ${supervisor}`
+      : "Supervisor nao informado e nenhum grupo padrao configurado"
+  };
+}
+
+async function markBlocked(docSnap, data, reason) {
   await docSnap.ref.update({
     status: "blocked_supervisor",
     sentAt: null,
     attempts: data.attempts || 0,
-    lastError: `Supervisor fora do filtro ativo: ${filterSupervisor}`,
+    lastError: reason,
     lastAttemptAt: new Date().toISOString()
   });
 }
 
-async function processCancelamentos(db, webhookUrl, filterSupervisor) {
+async function sendWebhook(webhookUrl, payload) {
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Webhook respondeu com status ${response.status}`);
+  }
+}
+
+async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
   const snapshot = await db
     .collection("cancelamentoFila")
     .where("status", "==", "pending")
@@ -58,46 +151,44 @@ async function processCancelamentos(db, webhookUrl, filterSupervisor) {
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
+    const routing = resolveRouting(data, runtimeConfig, cliOptions);
 
-    if (!supervisorAllowed(data.supervisor, filterSupervisor)) {
-      await markBlockedBySupervisor(docSnap, data, filterSupervisor);
-      console.log(`Cancelamento bloqueado por supervisor: ${docSnap.id}`);
+    if (!routing.allowed) {
+      await markBlocked(docSnap, data, routing.reason);
+      console.log(`Cancelamento bloqueado: ${docSnap.id} -> ${routing.reason}`);
       continue;
     }
 
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          operator: data.operator,
-          operatorName: data.operatorName,
-          cancelCountOfDay: data.cancelCountOfDay,
-          reason: data.reason,
-          duration: data.duration,
-          time: data.time
-        })
+      await sendWebhook(webhookUrl, {
+        operator: data.operator,
+        operatorName: data.operatorName,
+        cancelCountOfDay: data.cancelCountOfDay,
+        reason: data.reason,
+        duration: data.duration,
+        time: data.time,
+        supervisor: data.supervisor || "",
+        groupId: routing.groupId,
+        routingMode: routing.routingMode
       });
-
-      if (!response.ok) {
-        throw new Error(`Webhook respondeu com status ${response.status}`);
-      }
 
       await docSnap.ref.update({
         status: "sent",
         sentAt: new Date().toISOString(),
         attempts: (data.attempts || 0) + 1,
-        lastError: null
+        lastError: null,
+        targetGroupId: routing.groupId,
+        routingMode: routing.routingMode
       });
 
-      console.log(`Cancelamento enviado: ${docSnap.id}`);
+      console.log(`Cancelamento enviado: ${docSnap.id} -> ${routing.groupId}`);
     } catch (error) {
       await docSnap.ref.update({
         attempts: (data.attempts || 0) + 1,
         lastAttemptAt: new Date().toISOString(),
-        lastError: error.message
+        lastError: error.message,
+        targetGroupId: routing.groupId,
+        routingMode: routing.routingMode
       });
 
       console.error(`Falha ao enviar cancelamento ${docSnap.id}: ${error.message}`);
@@ -105,7 +196,7 @@ async function processCancelamentos(db, webhookUrl, filterSupervisor) {
   }
 }
 
-async function processDemandas(db, webhookUrl, filterSupervisor) {
+async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
   const snapshot = await db
     .collection("demandasFila")
     .where("status", "==", "pending")
@@ -116,41 +207,39 @@ async function processDemandas(db, webhookUrl, filterSupervisor) {
 
   for (const docSnap of snapshot.docs) {
     const data = docSnap.data();
+    const routing = resolveRouting(data, runtimeConfig, cliOptions);
 
-    if (!supervisorAllowed(data.supervisor, filterSupervisor)) {
-      await markBlockedBySupervisor(docSnap, data, filterSupervisor);
-      console.log(`Demanda bloqueada por supervisor: ${docSnap.id}`);
+    if (!routing.allowed) {
+      await markBlocked(docSnap, data, routing.reason);
+      console.log(`Demanda bloqueada: ${docSnap.id} -> ${routing.reason}`);
       continue;
     }
 
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: data.message
-        })
+      await sendWebhook(webhookUrl, {
+        message: data.message,
+        supervisor: data.supervisor || "",
+        groupId: routing.groupId,
+        routingMode: routing.routingMode
       });
-
-      if (!response.ok) {
-        throw new Error(`Webhook respondeu com status ${response.status}`);
-      }
 
       await docSnap.ref.update({
         status: "sent",
         sentAt: new Date().toISOString(),
         attempts: (data.attempts || 0) + 1,
-        lastError: null
+        lastError: null,
+        targetGroupId: routing.groupId,
+        routingMode: routing.routingMode
       });
 
-      console.log(`Demanda enviada: ${docSnap.id}`);
+      console.log(`Demanda enviada: ${docSnap.id} -> ${routing.groupId}`);
     } catch (error) {
       await docSnap.ref.update({
         attempts: (data.attempts || 0) + 1,
         lastAttemptAt: new Date().toISOString(),
-        lastError: error.message
+        lastError: error.message,
+        targetGroupId: routing.groupId,
+        routingMode: routing.routingMode
       });
 
       console.error(`Falha ao enviar demanda ${docSnap.id}: ${error.message}`);
@@ -158,39 +247,50 @@ async function processDemandas(db, webhookUrl, filterSupervisor) {
   }
 }
 
-async function processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, filterSupervisor) {
-  await processCancelamentos(db, cancelamentoWebhookUrl, filterSupervisor);
-  await processDemandas(db, demandaWebhookUrl, filterSupervisor);
+async function processQueues(db, cliOptions) {
+  const runtimeConfig = await loadRuntimeConfig(db);
+  const cancelamentoWebhookUrl = normalizeUrl(
+    cliOptions.n8nBaseUrl || runtimeConfig.settings.n8nBaseUrl,
+    cliOptions.cancelamentoWebhookPath || runtimeConfig.settings.cancelamentoWebhookPath,
+    cliOptions.cancelamentoWebhookUrl || DEFAULT_CANCELAMENTO_WEBHOOK_URL
+  );
+  const demandaWebhookUrl = normalizeUrl(
+    cliOptions.n8nBaseUrl || runtimeConfig.settings.n8nBaseUrl,
+    cliOptions.demandaWebhookPath || runtimeConfig.settings.demandaWebhookPath,
+    cliOptions.demandaWebhookUrl || DEFAULT_DEMANDA_WEBHOOK_URL
+  );
+
+  await processCancelamentos(db, cancelamentoWebhookUrl, runtimeConfig, cliOptions);
+  await processDemandas(db, demandaWebhookUrl, runtimeConfig, cliOptions);
 }
 
 async function main() {
   const serviceAccountPath = getArgValue("--service-account");
   const webhookUrl = getArgValue("--webhook-url");
-  const cancelamentoWebhookUrl =
-    getArgValue("--cancelamento-webhook-url") ||
-    webhookUrl ||
-    DEFAULT_CANCELAMENTO_WEBHOOK_URL;
-  const demandaWebhookUrl =
-    getArgValue("--demanda-webhook-url") ||
-    webhookUrl ||
-    DEFAULT_DEMANDA_WEBHOOK_URL;
+  const cliOptions = {
+    cancelamentoWebhookUrl: getArgValue("--cancelamento-webhook-url") || webhookUrl || "",
+    demandaWebhookUrl: getArgValue("--demanda-webhook-url") || webhookUrl || "",
+    cancelamentoWebhookPath: getArgValue("--cancelamento-webhook-path") || "",
+    demandaWebhookPath: getArgValue("--demanda-webhook-path") || "",
+    n8nBaseUrl: getArgValue("--n8n-base-url") || "",
+    fallbackGroupId: getArgValue("--fallback-group-id") || "",
+    supervisorFilter: String(getArgValue("--supervisor") || "").trim()
+  };
   const intervalMs = Number(getArgValue("--interval-ms") || DEFAULT_INTERVAL_MS);
-  const supervisorFilter = String(getArgValue("--supervisor") || "").trim();
 
   await ensureAdmin(serviceAccountPath);
   const db = getFirestore();
 
   console.log("Worker da fila iniciado.");
-  console.log(`Webhook de cancelamento: ${cancelamentoWebhookUrl}`);
-  console.log(`Webhook de demanda: ${demandaWebhookUrl}`);
-  console.log(`Supervisor filtrado: ${supervisorFilter || "todos"}`);
+  console.log(`Supervisor filtrado: ${cliOptions.supervisorFilter || "todos"}`);
   console.log(`Intervalo de varredura: ${intervalMs}ms`);
+  console.log("Configuracoes do bot serao lidas do Firestore a cada ciclo.");
 
-  await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, supervisorFilter);
+  await processQueues(db, cliOptions);
 
   setInterval(async () => {
     try {
-      await processQueues(db, cancelamentoWebhookUrl, demandaWebhookUrl, supervisorFilter);
+      await processQueues(db, cliOptions);
     } catch (error) {
       console.error("Erro ao processar fila:", error.message);
     }

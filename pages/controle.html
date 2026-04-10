@@ -18,12 +18,17 @@
       <input id="toolPasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
 
       <button id="toolLoginButton" class="primary-button" type="button">Entrar</button>
-      <a class="tool-link-inline" href="./admin.html">Voltar para a gestão</a>
+      <a class="tool-link-inline" href="./admin.html" target="_blank" rel="noreferrer">Voltar para a gestão</a>
     </div>
   </div>
 
   <div id="toolApp" class="tool-shell hidden">
     <aside class="tool-sidebar">
+      <button id="toggleToolSidebarButton" class="tool-sidebar-toggle" type="button" aria-expanded="true" aria-label="Minimizar menu">
+        <span class="tool-sidebar-toggle-bar"></span>
+        <span class="tool-sidebar-toggle-bar"></span>
+      </button>
+
       <div class="tool-brand">
         <span class="tool-brand-kicker">Central de operação</span>
         <h1>Painel da Ferramenta</h1>
@@ -38,8 +43,8 @@
       </nav>
 
       <div class="tool-sidebar-footer">
-        <a class="tool-link-button" href="./admin.html">Gestão</a>
-        <a class="tool-link-button" href="./filas.html">Filas</a>
+        <a class="tool-link-button" href="./admin.html" target="_blank" rel="noreferrer">Gestão</a>
+        <a class="tool-link-button" href="./filas.html" target="_blank" rel="noreferrer">Filas</a>
         <button id="toolLogoutButton" class="tool-link-button" type="button">Sair</button>
       </div>
     </aside>
@@ -54,32 +59,32 @@
 
         <div class="tool-header-actions">
           <button id="refreshToolDataButton" class="ghost-button" type="button">Atualizar dados</button>
-          <button id="saveToolSettingsButton" class="primary-button hidden" type="button">Salvar alterações</button>
+          <button id="saveToolSettingsButton" class="primary-button hidden" type="button" disabled>Salvar alterações</button>
         </div>
       </header>
 
       <p id="toolPageFeedback" class="tool-feedback hidden"></p>
 
-      <section class="tool-overview">
-        <article class="overview-card">
-          <strong id="overviewQueues">0</strong>
-          <span>Itens em fila</span>
-        </article>
-        <article class="overview-card">
-          <strong id="overviewBlocked">0</strong>
-          <span>Bloqueados</span>
-        </article>
-        <article class="overview-card">
-          <strong id="overviewGroups">0</strong>
-          <span>Grupos configurados</span>
-        </article>
-        <article class="overview-card">
-          <strong id="overviewSupervisors">0</strong>
-          <span>Supervisores mapeados</span>
-        </article>
-      </section>
-
       <section id="panel-queues" class="tool-panel">
+        <section class="tool-overview">
+          <article class="overview-card">
+            <strong id="overviewQueues">0</strong>
+            <span>Itens em fila</span>
+          </article>
+          <article class="overview-card">
+            <strong id="overviewBlocked">0</strong>
+            <span>Bloqueados</span>
+          </article>
+          <article class="overview-card">
+            <strong id="overviewGroups">0</strong>
+            <span>Grupos configurados</span>
+          </article>
+          <article class="overview-card">
+            <strong id="overviewSupervisors">0</strong>
+            <span>Supervisores mapeados</span>
+          </article>
+        </section>
+
         <div class="panel-intro">
           <h3>Controle das filas</h3>
           <p>Acompanhe rapidamente o volume das filas e use a página dedicada quando precisar agir item por item.</p>
@@ -102,7 +107,7 @@
             </div>
 
             <div class="tool-card-actions">
-              <a class="ghost-button tool-link-button" href="./filas.html">Abrir fila</a>
+              <a class="ghost-button tool-link-button compact-link-button" href="./filas.html" target="_blank" rel="noreferrer">Abrir fila</a>
             </div>
           </article>
 
@@ -122,7 +127,7 @@
             </div>
 
             <div class="tool-card-actions">
-              <a class="ghost-button tool-link-button" href="./filas.html">Abrir fila</a>
+              <a class="ghost-button tool-link-button compact-link-button" href="./filas.html" target="_blank" rel="noreferrer">Abrir fila</a>
             </div>
           </article>
         </div>

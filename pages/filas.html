@@ -10,14 +10,14 @@
   <div id="queueLogin" class="auth-shell">
     <div class="auth-card">
       <h1>Filas operacionais</h1>
-      <p class="auth-copy">Entre com Almope e senha. Somente administradores podem abrir esta página.</p>
+      <p class="auth-copy">Entre com Almope e senha. Somente administradores podem abrir esta pagina.</p>
       <p id="queueAuthFeedback" class="auth-feedback hidden"></p>
 
       <input id="queueMatriculaInput" type="text" placeholder="Almope" autocomplete="username" inputmode="numeric">
       <input id="queuePasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
 
       <button id="queueLoginButton" class="primary-button" type="button">Entrar</button>
-      <a class="auth-back-link" href="./admin.html">Voltar para a gestão</a>
+      <a class="auth-back-link" href="./admin.html" target="_blank" rel="noreferrer">Voltar para a gestao</a>
     </div>
   </div>
 
@@ -29,8 +29,8 @@
       </div>
 
       <div class="header-actions">
-        <a class="ghost-button header-link-button" href="./controle.html">Painel</a>
-        <a class="ghost-button header-link-button" href="./admin.html">Gestão</a>
+        <a class="ghost-button header-link-button" href="./controle.html" target="_blank" rel="noreferrer">Painel</a>
+        <a class="ghost-button header-link-button" href="./admin.html" target="_blank" rel="noreferrer">Gestao</a>
         <button id="refreshQueuesButton" class="ghost-button" type="button">Atualizar</button>
         <button id="queueLogoutButton" class="ghost-button" type="button">Sair</button>
       </div>
@@ -51,7 +51,7 @@
     <section class="panel">
       <div class="panel-header">
         <h2 id="queuePanelTitle">Fila de cancelamentos</h2>
-        <span>Visualize status, supervisor e remova itens quando necessário.</span>
+        <span>Visualize status, supervisor e remova itens quando necessario.</span>
       </div>
 
       <div id="queueList" class="queue-list"></div>
