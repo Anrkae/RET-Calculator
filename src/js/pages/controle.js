@@ -13,6 +13,7 @@ import {
 } from "../services/controle-service.js";
 import {
   checkSessionConnection,
+  closeSession,
   extractConnectionStatus,
   extractQrCode,
   getQrCodeSession,
@@ -193,6 +194,51 @@ function renderQrCode(imageSource = "", title = "QR indisponivel", copy = "Use o
   }
 }
 
+function getFriendlyWhatsappStatus(payload) {
+  const parsed = extractConnectionStatus(payload);
+  const rawStatus = String(
+    payload?.status ||
+    payload?.message ||
+    payload?.state ||
+    parsed.statusText ||
+    ""
+  ).trim();
+  const normalized = rawStatus.toLowerCase();
+
+  if (normalized.includes("connected")) {
+    return {
+      connected: true,
+      label: "Conectado"
+    };
+  }
+
+  if (normalized.includes("connecting")) {
+    return {
+      connected: false,
+      label: "Conectando"
+    };
+  }
+
+  if (normalized.includes("qr")) {
+    return {
+      connected: false,
+      label: "Aguardando QR"
+    };
+  }
+
+  if (normalized.includes("close") || normalized.includes("disconnected")) {
+    return {
+      connected: false,
+      label: "Desconectado"
+    };
+  }
+
+  return {
+    connected: parsed.connected,
+    label: parsed.connected ? "Conectado" : "Nao verificado"
+  };
+}
+
 function applySidebarState() {
   const shell = document.getElementById("toolApp");
   const toggleButton = document.getElementById("toggleToolSidebarButton");
@@ -209,8 +255,17 @@ async function refreshWhatsappStatus() {
 
   try {
     const response = await checkSessionConnection(getWhatsappConfig());
-    const parsed = extractConnectionStatus(response);
-    renderWhatsappStatus(parsed.connected, parsed.statusText);
+    const friendlyStatus = getFriendlyWhatsappStatus(response);
+    renderWhatsappStatus(friendlyStatus.connected, friendlyStatus.label);
+
+    if (friendlyStatus.connected) {
+      renderQrCode(
+        "",
+        "Sessao conectada",
+        "Nao existe QR Code enquanto o bot estiver online e conectado."
+      );
+    }
+
     setWhatsappFeedback("Status da sessao atualizado.", "success");
   } catch (error) {
     renderWhatsappStatus(false, "Falha na consulta");
@@ -226,6 +281,15 @@ async function handleStartWhatsappSession() {
 
     if (qrCode) {
       renderQrCode(qrCode, "QR Code pronto", "Leia este QR Code no WhatsApp para reconectar a sessao.");
+    } else {
+      const friendlyStatus = getFriendlyWhatsappStatus(response);
+      if (friendlyStatus.connected) {
+        renderQrCode(
+          "",
+          "Sessao conectada",
+          "A sessao ja esta conectada. Nenhum QR Code precisa ser exibido agora."
+        );
+      }
     }
 
     await refreshWhatsappStatus();
@@ -242,6 +306,20 @@ async function handleGenerateWhatsappQr() {
     const qrCode = extractQrCode(response);
 
     if (!qrCode) {
+      const message = String(response?.message || "").toLowerCase();
+      const status = String(response?.status || "").toLowerCase();
+
+      if (message.includes("not available") || status.includes("connected")) {
+        renderWhatsappStatus(true, "Conectado");
+        renderQrCode(
+          "",
+          "Sessao conectada",
+          "Nao existe QR Code disponivel enquanto o bot estiver conectado."
+        );
+        setWhatsappFeedback("A sessao ja esta conectada, por isso nao ha QR para mostrar.", "success");
+        return;
+      }
+
       renderQrCode("", "QR nao encontrado", "A API respondeu, mas nao retornou uma imagem de QR Code nesta consulta.");
       setWhatsappFeedback("Nao encontrei um QR Code valido nesta resposta.", "error");
       return;
@@ -251,6 +329,22 @@ async function handleGenerateWhatsappQr() {
     setWhatsappFeedback("QR Code atualizado com sucesso.", "success");
   } catch (error) {
     setWhatsappFeedback(error.message || "Nao foi possivel obter o QR Code da sessao.", "error");
+  }
+}
+
+async function handleCloseWhatsappSession() {
+  try {
+    setWhatsappFeedback("Fechando a sessao atual do bot...", "success");
+    await closeSession(getWhatsappConfig());
+    renderWhatsappStatus(false, "Sessao fechada");
+    renderQrCode(
+      "",
+      "Sessao fechada",
+      "Agora voce pode iniciar a sessao novamente e gerar um novo QR Code."
+    );
+    setWhatsappFeedback("Sessao fechada com sucesso. Gere um novo QR Code para reconectar.", "success");
+  } catch (error) {
+    setWhatsappFeedback(error.message || "Nao foi possivel fechar a sessao do bot.", "error");
   }
 }
 
@@ -564,6 +658,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sidebarToggleButton = document.getElementById("toggleToolSidebarButton");
   const refreshWhatsappStatusButton = document.getElementById("refreshWhatsappStatusButton");
   const startWhatsappSessionButton = document.getElementById("startWhatsappSessionButton");
+  const closeWhatsappSessionButton = document.getElementById("closeWhatsappSessionButton");
   const generateWhatsappQrButton = document.getElementById("generateWhatsappQrButton");
 
   document.querySelectorAll("[data-panel-target]").forEach((button) => {
@@ -606,6 +701,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   refreshWhatsappStatusButton?.addEventListener("click", refreshWhatsappStatus);
   startWhatsappSessionButton?.addEventListener("click", handleStartWhatsappSession);
+  closeWhatsappSessionButton?.addEventListener("click", handleCloseWhatsappSession);
   generateWhatsappQrButton?.addEventListener("click", handleGenerateWhatsappQr);
 
   addMappingButton?.addEventListener("click", addSupervisorMappingRow);
