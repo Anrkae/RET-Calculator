@@ -302,7 +302,8 @@ async function handleStartWhatsappSession() {
 async function handleGenerateWhatsappQr() {
   try {
     setWhatsappFeedback("Consultando QR Code da sessao...", "success");
-    const response = await getQrCodeSession(getWhatsappConfig());
+    const config = getWhatsappConfig();
+    let response = await getQrCodeSession(config);
     const qrCode = extractQrCode(response);
 
     if (!qrCode) {
@@ -310,14 +311,34 @@ async function handleGenerateWhatsappQr() {
       const status = String(response?.status || "").toLowerCase();
 
       if (message.includes("not available") || status.includes("connected")) {
-        renderWhatsappStatus(true, "Conectado");
-        renderQrCode(
-          "",
-          "Sessao conectada",
-          "Nao existe QR Code disponivel enquanto o bot estiver conectado."
-        );
-        setWhatsappFeedback("A sessao ja esta conectada, por isso nao ha QR para mostrar.", "success");
-        return;
+        const connectionResponse = await checkSessionConnection(config);
+        const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
+
+        if (friendlyStatus.connected) {
+          renderWhatsappStatus(true, "Conectado");
+          renderQrCode(
+            "",
+            "Sessao conectada",
+            "Nao existe QR Code disponivel enquanto o bot estiver conectado."
+          );
+          setWhatsappFeedback("A sessao ja esta conectada, por isso nao ha QR para mostrar.", "success");
+          return;
+        }
+
+        setWhatsappFeedback("Sessao desconectada. Iniciando uma nova sessao para gerar QR...", "success");
+        response = await startSession({ ...config, waitQrCode: true });
+        const restartedQrCode = extractQrCode(response);
+
+        if (restartedQrCode) {
+          renderWhatsappStatus(false, "Aguardando QR");
+          renderQrCode(
+            restartedQrCode,
+            "QR Code pronto",
+            "Leia este QR Code no WhatsApp para reconectar a sessao."
+          );
+          setWhatsappFeedback("Nova sessao iniciada e QR Code gerado com sucesso.", "success");
+          return;
+        }
       }
 
       renderQrCode("", "QR nao encontrado", "A API respondeu, mas nao retornou uma imagem de QR Code nesta consulta.");
