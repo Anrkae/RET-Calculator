@@ -67,6 +67,8 @@ async function salvarAtendimento(profile, data) {
       supervisor: atendimento.supervisor,
       cancelCountOfDay: atendimento.cancelCountOfDay,
       reason: atendimento.reason,
+      contract: atendimento.contract || "",
+      observation: atendimento.observation || "",
       duration: atendimento.duration,
       time: atendimento.time,
       dayId: atendimento.dayId,

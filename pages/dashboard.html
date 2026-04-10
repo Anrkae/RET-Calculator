@@ -27,6 +27,13 @@
         </button>
       </div>
 
+      <div class="dashboard-tabs">
+        <button id="showOverviewTab" class="dashboard-tab-button is-active" type="button">Visão geral</button>
+        <button id="showPreferencesTab" class="dashboard-tab-button" type="button">Preferências</button>
+      </div>
+
+      <section id="dashboardOverviewTab">
+
       <div class="resultados">
         <div class="stats-card">
           <div class="stats-number" id="statTotal">0</div>
@@ -39,6 +46,44 @@
         </div>
       </div>
 
+      </section>
+
+      <section id="dashboardPreferencesTab" class="hidden">
+      <div class="preferences-section">
+        <div class="preferences-header">
+          <div>
+            <h3>Preferências</h3>
+            <p class="preferences-copy">Ajustes pessoais da dashboard, salvos apenas neste navegador.</p>
+          </div>
+        </div>
+
+        <div class="preferences-grid">
+          <label class="preference-card" for="prefAutoOpenPip">
+            <div class="preference-copy">
+              <strong>Abrir PiP ao mudar de página</strong>
+              <span>Quando ativo, o painel flutuante abre automaticamente ao sair da aba atual.</span>
+            </div>
+            <div class="preference-control">
+              <span id="prefAutoOpenPipState" class="preference-state">Ativado</span>
+              <input id="prefAutoOpenPip" type="checkbox" checked>
+            </div>
+          </label>
+
+          <label class="preference-card" for="prefAskCancelObservation">
+            <div class="preference-copy">
+              <strong>Pedir observação no cancelamento</strong>
+              <span>Depois de confirmar um cancelamento, abre uma etapa extra para observação antes do disparo.</span>
+            </div>
+            <div class="preference-control">
+              <span id="prefAskCancelObservationState" class="preference-state">Desativado</span>
+              <input id="prefAskCancelObservation" type="checkbox">
+            </div>
+          </label>
+        </div>
+      </div>
+      </section>
+
+      <section id="dashboardOverviewHistoryTab">
       <div class="history-section">
         <div class="history-header">
           <h3>Histórico de atendimentos</h3>
@@ -54,6 +99,7 @@
 
         <div id="historyList" class="collapsed"></div>
       </div>
+      </section>
     </div>
   </div>
 

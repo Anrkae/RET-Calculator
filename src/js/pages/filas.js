@@ -61,7 +61,15 @@ function getStatusLabel(status) {
 
 function buildQueueDescription(item) {
   if (currentTab === CANCELAMENTO_COLLECTION) {
-    return `Motivo: ${item.reason || "-"} • ${item.time || "-"} • #${item.cancelCountOfDay || 0}`;
+    const parts = [
+      `Motivo: ${item.reason || "-"}`,
+      item.contract ? `Contrato: ${item.contract}` : "",
+      item.observation ? `Obs: ${item.observation}` : "",
+      item.time || "-",
+      `#${item.cancelCountOfDay || 0}`
+    ].filter(Boolean);
+
+    return parts.join(" • ");
   }
 
   return item.message || "Sem mensagem";

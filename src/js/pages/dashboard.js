@@ -21,6 +21,44 @@ let selectedDemandType = "";
 let selectedDemandDate = "";
 let demandCalendarMonth = new Date().getMonth();
 let demandCalendarYear = new Date().getFullYear();
+let activeDashboardTab = "overview";
+const DASHBOARD_PREFERENCES_KEY = "ret-dashboard-preferences";
+const DEFAULT_DASHBOARD_PREFERENCES = {
+  autoOpenPipOnPageChange: true,
+  askObservationOnCancel: false
+};
+let dashboardPreferences = loadDashboardPreferences();
+
+function loadDashboardPreferences() {
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_PREFERENCES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+
+    return {
+      ...DEFAULT_DASHBOARD_PREFERENCES,
+      ...parsed
+    };
+  } catch (error) {
+    console.error("Erro ao carregar preferências da dashboard:", error);
+    return { ...DEFAULT_DASHBOARD_PREFERENCES };
+  }
+}
+
+function persistDashboardPreferences() {
+  window.localStorage.setItem(
+    DASHBOARD_PREFERENCES_KEY,
+    JSON.stringify(dashboardPreferences)
+  );
+}
+
+function updateDashboardPreference(key, value) {
+  dashboardPreferences = {
+    ...dashboardPreferences,
+    [key]: value
+  };
+  persistDashboardPreferences();
+  renderDashboardPreferences();
+}
 
 const demandTemplates = {
   "encaixe-vt": `
@@ -96,6 +134,44 @@ const demandTemplates = {
     </div>
   `
 };
+
+function renderDashboardPreferences() {
+  const autoOpenInput = document.getElementById("prefAutoOpenPip");
+  const autoOpenState = document.getElementById("prefAutoOpenPipState");
+  const observationInput = document.getElementById("prefAskCancelObservation");
+  const observationState = document.getElementById("prefAskCancelObservationState");
+
+  if (autoOpenInput) {
+    autoOpenInput.checked = Boolean(dashboardPreferences.autoOpenPipOnPageChange);
+  }
+
+  if (autoOpenState) {
+    autoOpenState.textContent = dashboardPreferences.autoOpenPipOnPageChange ? "Ativado" : "Desativado";
+  }
+
+  if (observationInput) {
+    observationInput.checked = Boolean(dashboardPreferences.askObservationOnCancel);
+  }
+
+  if (observationState) {
+    observationState.textContent = dashboardPreferences.askObservationOnCancel ? "Ativado" : "Desativado";
+  }
+}
+
+function setDashboardTab(tab) {
+  activeDashboardTab = tab;
+
+  const showOverview = tab === "overview";
+  const overviewTabButton = document.getElementById("showOverviewTab");
+  const preferencesTabButton = document.getElementById("showPreferencesTab");
+
+  document.getElementById("dashboardOverviewTab")?.classList.toggle("hidden", !showOverview);
+  document.getElementById("dashboardOverviewHistoryTab")?.classList.toggle("hidden", !showOverview);
+  document.getElementById("dashboardPreferencesTab")?.classList.toggle("hidden", showOverview);
+
+  overviewTabButton?.classList.toggle("is-active", showOverview);
+  preferencesTabButton?.classList.toggle("is-active", !showOverview);
+}
 
 function buildDayOptions() {
   return Array.from({ length: 31 }, (_, index) => {
@@ -295,6 +371,18 @@ function normalizeContract(value) {
   const raw = String(value || "").replace(/\D/g, "").slice(0, 12);
   if (raw.length < 12) return formatContractInput(raw);
   return `${raw.slice(0, 3)}/${raw.slice(3, 12)}`;
+}
+
+function normalizeOptionalContract(value) {
+  const normalized = normalizeContract(value);
+
+  if (!normalized) return "";
+
+  if (!/^\d{3}\/\d{9}$/.test(normalized)) {
+    throw new Error("Digite o contrato no formato 000/123456789 ou deixe em branco.");
+  }
+
+  return normalized;
 }
 
 function normalizeHour(value) {
@@ -680,6 +768,11 @@ function renderHistory() {
   history.forEach((item) => {
     const div = document.createElement("div");
     let statusClass = "";
+    const detailParts = [
+      item.reason || "",
+      item.contract ? `Contrato ${item.contract}` : "",
+      item.observation ? `Obs: ${item.observation}` : ""
+    ].filter(Boolean);
 
     if (item.result === "Retido") {
       statusClass = "retido";
@@ -689,7 +782,7 @@ function renderHistory() {
 
     div.className = `history-item ${statusClass}`.trim();
     div.innerHTML = `<strong>${item.result}</strong>
-      ${item.reason ? ` • ${item.reason}` : ""}
+      ${detailParts.length ? ` • ${detailParts.join(" • ")}` : ""}
       <br><small>${item.duration} • ${item.date} ${item.time}</small>`;
 
     historyList.appendChild(div);
@@ -820,7 +913,7 @@ function updateStats() {
   }
 }
 
-async function addToHistory(duration, result, reason) {
+async function addToHistory(duration, result, reason, extraData = {}) {
   if (!currentProfile) return;
 
   const now = new Date();
@@ -835,6 +928,8 @@ async function addToHistory(duration, result, reason) {
     duration,
     result,
     reason,
+    contract: extraData.contract || "",
+    observation: extraData.observation || "",
     timestamp: now.getTime(),
     operator: currentProfile.matricula,
     operatorName: currentProfile.nome,
@@ -908,6 +1003,19 @@ function canOpenPip() {
   return Boolean(currentProfile?.matricula);
 }
 
+function resetCallState() {
+  clearInterval(callInterval);
+  seconds = 0;
+  selectedResult = null;
+}
+
+function renderMainPipPanel() {
+  if (!pipWindow || pipWindow.closed) return;
+
+  pipWindow.document.body.innerHTML = window.createPipPanelMarkup(getOperatorDisplayName());
+  bindPanel();
+}
+
 async function openFloatingPanel() {
   if (!canOpenPip()) {
     alert("Faça login novamente antes de abrir o painel.");
@@ -934,12 +1042,60 @@ async function openFloatingPanel() {
   });
 
   pipWindow.addEventListener("pagehide", () => {
-    clearInterval(callInterval);
+    resetCallState();
     pipWindow = null;
   });
 
-  pipWindow.document.body.innerHTML = window.createPipPanelMarkup(getOperatorDisplayName());
-  bindPanel();
+  renderMainPipPanel();
+}
+
+function requestCancelObservation(context = {}) {
+  if (!dashboardPreferences.askObservationOnCancel) {
+    return Promise.resolve("");
+  }
+
+  if (!pipWindow || pipWindow.closed) {
+    return Promise.resolve("");
+  }
+
+  if (typeof window.createPipObservationMarkup !== "function") {
+    return Promise.resolve("");
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (value = "") => {
+      if (settled) return;
+      settled = true;
+      pipWindow?.removeEventListener("pagehide", handleClose);
+      resolve(String(value || "").trim());
+    };
+
+    const handleClose = () => {
+      finish("");
+    };
+
+    pipWindow.addEventListener("pagehide", handleClose);
+    pipWindow.document.body.innerHTML = window.createPipObservationMarkup(
+      getOperatorDisplayName(),
+      context
+    );
+
+    const observationInput = pipWindow.document.getElementById("observationInput");
+    const skipButton = pipWindow.document.getElementById("skipObservationBtn");
+    const saveButton = pipWindow.document.getElementById("saveObservationBtn");
+
+    skipButton?.addEventListener("click", () => {
+      finish("");
+    });
+
+    saveButton?.addEventListener("click", () => {
+      finish(observationInput?.value || "");
+    });
+
+    observationInput?.focus();
+  });
 }
 
 function getPipScrollElement() {
@@ -990,6 +1146,8 @@ function scrollPipToBottom() {
 
 function setPipIdleState(doc) {
   const reasonSelect = doc.getElementById("reasonSelect");
+  const contractFieldLabel = doc.getElementById("contractFieldLabel");
+  const contractInput = doc.getElementById("contractInput");
   const confirmBtn = doc.getElementById("confirmBtn");
   const retidoBtn = doc.getElementById("retidoBtn");
   const canceladoBtn = doc.getElementById("canceladoBtn");
@@ -1000,6 +1158,15 @@ function setPipIdleState(doc) {
   if (reasonSelect) {
     reasonSelect.classList.add("hidden");
     reasonSelect.value = "";
+  }
+
+  if (contractFieldLabel) {
+    contractFieldLabel.classList.add("hidden");
+  }
+
+  if (contractInput) {
+    contractInput.classList.add("hidden");
+    contractInput.value = "";
   }
 
   if (confirmBtn) {
@@ -1029,6 +1196,8 @@ function setPipIdleState(doc) {
 
 function prepareCanceladoState(doc) {
   const reasonSelect = doc.getElementById("reasonSelect");
+  const contractFieldLabel = doc.getElementById("contractFieldLabel");
+  const contractInput = doc.getElementById("contractInput");
   const confirmBtn = doc.getElementById("confirmBtn");
   const retidoBtn = doc.getElementById("retidoBtn");
   const canceladoBtn = doc.getElementById("canceladoBtn");
@@ -1048,6 +1217,15 @@ function prepareCanceladoState(doc) {
   if (reasonSelect) {
     reasonSelect.classList.remove("hidden");
     reasonSelect.classList.add("fade-in");
+  }
+
+  if (contractFieldLabel) {
+    contractFieldLabel.classList.remove("hidden");
+  }
+
+  if (contractInput) {
+    contractInput.classList.remove("hidden");
+    contractInput.classList.add("fade-in");
   }
 
   if (confirmBtn) {
@@ -1075,7 +1253,13 @@ function bindPanel() {
   const retidoBtn = doc.getElementById("retidoBtn");
   const canceladoBtn = doc.getElementById("canceladoBtn");
   const reasonSelect = doc.getElementById("reasonSelect");
+  const contractFieldLabel = doc.getElementById("contractFieldLabel");
+  const contractInput = doc.getElementById("contractInput");
   const confirmBtn = doc.getElementById("confirmBtn");
+
+  contractInput?.addEventListener("input", () => {
+    contractInput.value = formatContractInput(contractInput.value);
+  });
 
   setPipIdleState(doc);
 
@@ -1126,6 +1310,15 @@ function bindPanel() {
         reasonSelect.value = "";
       }
 
+      if (contractFieldLabel) {
+        contractFieldLabel.classList.add("hidden");
+      }
+
+      if (contractInput) {
+        contractInput.classList.add("hidden");
+        contractInput.value = "";
+      }
+
       if (confirmBtn) {
         confirmBtn.classList.add("hidden");
         resetButtonConfirm(confirmBtn);
@@ -1156,21 +1349,36 @@ function bindPanel() {
     if (!reasonSelect.value) return;
 
     await confirmAction(confirmBtn, async () => {
-      await addToHistory(formatTime(seconds), "Cancelado", reasonSelect.value);
+      const contract = normalizeOptionalContract(contractInput?.value || "");
+      const observation = await requestCancelObservation({
+        reason: reasonSelect.value,
+        contract
+      });
+
+      await addToHistory(formatTime(seconds), "Cancelado", reasonSelect.value, {
+        contract,
+        observation
+      });
+
+      if (dashboardPreferences.askObservationOnCancel) {
+        resetCallState();
+        if (pipWindow && !pipWindow.closed) {
+          renderMainPipPanel();
+        }
+        return;
+      }
+
       resetPanel();
     });
   };
 }
 
 function resetPanel() {
-  clearInterval(callInterval);
+  resetCallState();
 
   if (!pipWindow || pipWindow.closed) return;
 
   const doc = pipWindow.document;
-
-  seconds = 0;
-  selectedResult = null;
 
   doc.getElementById("statusTitle").textContent = "Disponível";
   doc.getElementById("timer").textContent = "00:00";
@@ -1215,6 +1423,7 @@ async function initializeDashboard() {
 
   document.getElementById("dashboard")?.classList.remove("hidden");
   renderOperatorInfo();
+  renderDashboardPreferences();
 
   history = await buscarLigacoes(currentProfile);
   history.sort((a, b) => b.timestamp - a.timestamp);
@@ -1222,7 +1431,11 @@ async function initializeDashboard() {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && canOpenPip()) {
+  if (
+    document.visibilityState === "hidden" &&
+    dashboardPreferences.autoOpenPipOnPageChange &&
+    canOpenPip()
+  ) {
     openFloatingPanel();
   }
 });
@@ -1246,6 +1459,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
   const cancelDemandBtn = document.getElementById("cancelDemandBtn");
   const submitDemandBtn = document.getElementById("submitDemandBtn");
+  const prefAutoOpenPip = document.getElementById("prefAutoOpenPip");
+  const prefAskCancelObservation = document.getElementById("prefAskCancelObservation");
+  const showOverviewTab = document.getElementById("showOverviewTab");
+  const showPreferencesTab = document.getElementById("showPreferencesTab");
 
   logoutButton?.addEventListener("click", openLogoutModal);
   toggleHistoryBtn?.addEventListener("click", toggleHistory);
@@ -1256,6 +1473,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
+  prefAutoOpenPip?.addEventListener("change", () => {
+    updateDashboardPreference("autoOpenPipOnPageChange", Boolean(prefAutoOpenPip.checked));
+  });
+  prefAskCancelObservation?.addEventListener("change", () => {
+    updateDashboardPreference("askObservationOnCancel", Boolean(prefAskCancelObservation.checked));
+  });
+  showOverviewTab?.addEventListener("click", () => {
+    setDashboardTab("overview");
+  });
+  showPreferencesTab?.addEventListener("click", () => {
+    setDashboardTab("preferences");
+  });
   demandDynamicFields?.addEventListener("input", handleDemandFieldFormatting);
   demandTypeTrigger?.addEventListener("click", () => {
     const menuIsHidden = demandTypeMenu?.classList.contains("hidden");
@@ -1309,5 +1538,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  setDashboardTab(activeDashboardTab);
   await initializeDashboard();
 });

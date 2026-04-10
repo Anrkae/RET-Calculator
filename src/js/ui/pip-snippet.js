@@ -114,6 +114,12 @@ color:white;
 box-shadow:0 6px 14px rgba(239,68,68,0.2);
 }
 
+.ghost{
+background:rgba(255,255,255,0.06);
+color:white;
+border:1px solid rgba(255,255,255,0.08);
+}
+
 .row{
 display:flex;
 gap:6px;
@@ -123,7 +129,9 @@ gap:6px;
 flex:1;
 }
 
-select{
+select,
+input,
+textarea{
 width:100%;
 padding:9px 10px;
 margin-top:6px;
@@ -133,12 +141,33 @@ border:1px solid rgba(255,255,255,0.1);
 color:white;
 outline:none;
 font-size:12px;
+font-family:inherit;
 transition:border-color .2s ease, box-shadow .2s ease, opacity .2s ease, transform .2s ease;
 }
 
-select:focus{
+textarea{
+resize:vertical;
+}
+
+select:focus,
+input:focus,
+textarea:focus{
 border-color:var(--primary);
 box-shadow:0 0 0 3px rgba(230,0,0,0.18);
+}
+
+.field-label{
+display:block;
+margin-top:8px;
+font-size:11px;
+color:var(--muted);
+}
+
+.helper{
+font-size:11px;
+color:var(--muted);
+margin-top:6px;
+line-height:1.35;
 }
 
 .hidden{
@@ -210,11 +239,143 @@ to{width:100%}
 <option>021</option>
 </select>
 
+<label id="contractFieldLabel" class="field-label hidden" for="contractInput">Contrato opcional</label>
+<input id="contractInput" class="hidden fade-in" type="text" inputmode="numeric" maxlength="13" placeholder="000/123456789">
+
 <button id="confirmBtn" class="primary hidden fade-in" style="margin-top:6px;">
 <span>Concluir</span>
 </button>
 </div>
-`
+`;
 }
 
-window.createPipPanelMarkup = createPipPanelMarkup
+function createPipObservationMarkup(matricula, context = {}) {
+  return `
+<style>
+*{
+box-sizing:border-box;
+}
+
+:root{
+--text:#ffffff;
+--muted:rgba(255,255,255,0.68);
+--primary:#e60000;
+--primary-dark:#b80000;
+}
+
+html, body{
+width:100%;
+height:100%;
+}
+
+body{
+font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+background:linear-gradient(180deg,#111 0%, #1b1b1b 100%);
+color:var(--text);
+margin:0;
+padding:10px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+h3{
+margin:0;
+font-size:15px;
+font-weight:700;
+letter-spacing:-0.02em;
+}
+
+p{
+margin:0;
+font-size:12px;
+line-height:1.45;
+color:var(--muted);
+}
+
+.context{
+padding:10px;
+border-radius:10px;
+background:rgba(255,255,255,0.04);
+border:1px solid rgba(255,255,255,0.06);
+}
+
+.context strong,
+.context span{
+display:block;
+font-size:12px;
+}
+
+.context strong{
+margin-bottom:4px;
+}
+
+textarea{
+width:100%;
+min-height:108px;
+padding:10px;
+border-radius:10px;
+background:#151515;
+border:1px solid rgba(255,255,255,0.1);
+color:white;
+outline:none;
+font-size:12px;
+font-family:inherit;
+resize:none;
+}
+
+textarea:focus{
+border-color:var(--primary);
+box-shadow:0 0 0 3px rgba(230,0,0,0.18);
+}
+
+button{
+padding:10px 12px;
+border-radius:10px;
+border:none;
+cursor:pointer;
+font-size:12px;
+font-weight:600;
+width:100%;
+}
+
+.primary{
+background:linear-gradient(180deg,var(--primary) 0%, var(--primary-dark) 100%);
+color:white;
+box-shadow:0 6px 14px rgba(230,0,0,0.2);
+}
+
+.ghost{
+background:rgba(255,255,255,0.06);
+color:white;
+border:1px solid rgba(255,255,255,0.08);
+}
+
+.actions{
+display:flex;
+flex-direction:column;
+gap:8px;
+margin-top:auto;
+}
+</style>
+
+<h3>Observação do cancelamento</h3>
+<p>Operador: ${matricula}</p>
+
+<div class="context">
+<strong>Motivo: ${context.reason || "-"}</strong>
+<span>Contrato: ${context.contract || "não informado"}</span>
+</div>
+
+<textarea id="observationInput" placeholder="Digite uma observação complementar, se necessário."></textarea>
+<p>Se você fechar este PiP sem salvar, o cancelamento seguirá sem observação.</p>
+
+<div class="actions">
+<button id="skipObservationBtn" class="ghost" type="button">Enviar sem observação</button>
+<button id="saveObservationBtn" class="primary" type="button">Salvar observação</button>
+</div>
+`;
+}
+
+window.createPipPanelMarkup = createPipPanelMarkup;
+window.createPipObservationMarkup = createPipObservationMarkup;

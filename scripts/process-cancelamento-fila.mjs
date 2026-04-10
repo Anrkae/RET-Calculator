@@ -165,6 +165,8 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
         operatorName: data.operatorName,
         cancelCountOfDay: data.cancelCountOfDay,
         reason: data.reason,
+        contract: data.contract || "",
+        observation: data.observation || "",
         duration: data.duration,
         time: data.time,
         supervisor: data.supervisor || "",
