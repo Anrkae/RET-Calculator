@@ -287,16 +287,19 @@ async function handleStartWhatsappSession() {
     const qrCode = extractQrCode(response);
 
     if (qrCode) {
+      renderWhatsappStatus(false, "Aguardando QR");
       renderQrCode(qrCode, "QR Code pronto", "Leia este QR Code no WhatsApp para reconectar a sessao.");
-    } else {
-      const friendlyStatus = getFriendlyWhatsappStatus(response);
-      if (friendlyStatus.connected) {
-        renderQrCode(
-          "",
-          "Sessao conectada",
-          "A sessao ja esta conectada. Nenhum QR Code precisa ser exibido agora."
-        );
-      }
+      setWhatsappFeedback("Sessao iniciada. Leia o QR Code exibido para conectar o bot.", "success");
+      return;
+    }
+
+    const friendlyStatus = getFriendlyWhatsappStatus(response);
+    if (friendlyStatus.connected) {
+      renderQrCode(
+        "",
+        "Sessao conectada",
+        "A sessao ja esta conectada. Nenhum QR Code precisa ser exibido agora."
+      );
     }
 
     await refreshWhatsappStatus();
@@ -310,6 +313,20 @@ async function handleGenerateWhatsappQr() {
   try {
     setWhatsappFeedback("Consultando QR Code da sessao...", "success");
     const config = getWhatsappConfig();
+    const immediateQrResponse = await getQrCodeSession(config);
+    const immediateQrCode = extractQrCode(immediateQrResponse);
+
+    if (immediateQrCode) {
+      renderWhatsappStatus(false, "Aguardando QR");
+      renderQrCode(
+        immediateQrCode,
+        "QR Code pronto",
+        "Leia este QR Code no WhatsApp para reconectar a sessao."
+      );
+      setWhatsappFeedback("QR Code carregado com sucesso.", "success");
+      return;
+    }
+
     const connectionResponse = await checkSessionConnection(config);
     const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
 
