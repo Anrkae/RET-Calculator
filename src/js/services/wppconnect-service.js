@@ -3,11 +3,11 @@ function normalizeBaseUrl(value) {
 }
 
 function normalizeSessionName(value) {
-  return String(value || "").trim();
+  return String(value || "").replace(/\s+/g, "").trim();
 }
 
 function normalizeToken(value) {
-  return String(value || "").trim();
+  return String(value || "").replace(/\s+/g, "").trim();
 }
 
 function buildSessionIdentifier(sessionName, token) {
@@ -45,6 +45,27 @@ function buildHeaders(token = "", extraHeaders = {}) {
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
+  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+
+  if (contentType.includes("image/png")) {
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    if (!response.ok) {
+      throw new Error(`WPPConnect respondeu com status ${response.status}.`);
+    }
+
+    return {
+      status: "QRCODE",
+      qrcode: `data:image/png;base64,${btoa(binary)}`
+    };
+  }
+
   const raw = await response.text();
   let data = null;
 
