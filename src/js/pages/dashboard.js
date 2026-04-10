@@ -523,7 +523,27 @@ function buildDemandMessage(payload) {
     return `📌 *${operatorName}* - *Retirar Ponto Virtua*\n\n📄 *${payload.contract}*\n🔢 *Ponto ${payload.point}*\n📅 *${payload.date}* - *das ${payload.startHour} às ${payload.endHour}*`;
   }
 
-  return `📌 *${operatorName}* - *Suspensão Temporária:* *(${payload.suspensionItems.join(" e ")})*\n\n📄 *${payload.contract}*`;
+  return `📌 *${operatorName}* - *Suspensão Temporária:* *(${formatSuspensionItems(payload.suspensionItems)})*\n\n📄 *${payload.contract}*`;
+}
+
+function formatSuspensionItems(items = []) {
+  const sanitizedItems = items
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  if (!sanitizedItems.length) return "";
+
+  if (typeof Intl !== "undefined" && typeof Intl.ListFormat === "function") {
+    return new Intl.ListFormat("pt-BR", {
+      style: "long",
+      type: "conjunction"
+    }).format(sanitizedItems);
+  }
+
+  if (sanitizedItems.length === 1) return sanitizedItems[0];
+  if (sanitizedItems.length === 2) return sanitizedItems.join(" e ");
+
+  return `${sanitizedItems.slice(0, -1).join(", ")} e ${sanitizedItems.at(-1)}`;
 }
 
 function collectDemandPayload() {
@@ -837,13 +857,21 @@ function formatTime(sec) {
   return `${min}:${s}`;
 }
 
-function confirmAction(btn, callback) {
+async function confirmAction(btn, callback) {
   if (!btn || btn.dataset.loading === "true") return false;
 
   if (btn.classList.contains("confirming")) {
     btn.dataset.loading = "true";
     btn.disabled = true;
-    callback();
+    btn.classList.remove("confirming");
+
+    try {
+      await Promise.resolve(callback());
+    } catch (error) {
+      resetButtonConfirm(btn);
+      throw error;
+    }
+
     return true;
   }
 
@@ -1072,8 +1100,8 @@ function bindPanel() {
     scrollPipToBottom();
   };
 
-  endBtn.onclick = () => {
-    const confirmed = confirmAction(endBtn, () => {
+  endBtn.onclick = async () => {
+    const confirmed = await confirmAction(endBtn, () => {
       clearInterval(callInterval);
 
       statusTitle.textContent = "Finalizar";
@@ -1089,7 +1117,7 @@ function bindPanel() {
     }
   };
 
-  retidoBtn.onclick = () => {
+  retidoBtn.onclick = async () => {
     if (selectedResult !== "Retido") {
       selectedResult = "Retido";
 
@@ -1110,11 +1138,11 @@ function bindPanel() {
 
       resetButtonConfirm(retidoBtn);
       retidoBtn.dataset.confirmLabel = "Confirmar retido";
-      confirmAction(retidoBtn, () => {});
+      await confirmAction(retidoBtn, () => {});
       return;
     }
 
-    confirmAction(retidoBtn, async () => {
+    await confirmAction(retidoBtn, async () => {
       await addToHistory(formatTime(seconds), "Retido", "");
       resetPanel();
     });
@@ -1124,10 +1152,10 @@ function bindPanel() {
     prepareCanceladoState(doc);
   };
 
-  confirmBtn.onclick = () => {
+  confirmBtn.onclick = async () => {
     if (!reasonSelect.value) return;
 
-    confirmAction(confirmBtn, async () => {
+    await confirmAction(confirmBtn, async () => {
       await addToHistory(formatTime(seconds), "Cancelado", reasonSelect.value);
       resetPanel();
     });

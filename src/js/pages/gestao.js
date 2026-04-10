@@ -28,6 +28,7 @@ function setFeedback(elementId, message = "", type = "error") {
 function showAdminApp(profile) {
   document.getElementById("adminLogin")?.classList.add("hidden");
   document.getElementById("adminApp")?.classList.remove("hidden");
+  document.body.classList.remove("auth-pending");
 
   const identity = document.getElementById("adminIdentity");
   if (identity) {
@@ -38,6 +39,7 @@ function showAdminApp(profile) {
 function showLogin() {
   document.getElementById("adminLogin")?.classList.remove("hidden");
   document.getElementById("adminApp")?.classList.add("hidden");
+  document.body.classList.remove("auth-pending");
 }
 
 function openUserSearchModal() {
@@ -347,5 +349,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  await initializeAdmin();
+  try {
+    await initializeAdmin();
+  } catch (error) {
+    console.error("Erro ao inicializar área administrativa:", error);
+    showLogin();
+    setFeedback("adminAuthFeedback", "Não foi possível validar sua sessão agora.", "error");
+  } finally {
+    document.body.classList.remove("auth-pending");
+  }
 });

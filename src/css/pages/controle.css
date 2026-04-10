@@ -29,6 +29,10 @@ body.tool-theme {
   font-family: "Inter", "Segoe UI", sans-serif;
 }
 
+body.auth-pending > * {
+  visibility: hidden;
+}
+
 .tool-auth-shell {
   min-height: 100vh;
   display: flex;

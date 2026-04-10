@@ -37,6 +37,7 @@ function setAuthFeedback(message = "", type = "error") {
 function showQueueApp(profile) {
   document.getElementById("queueLogin")?.classList.add("hidden");
   document.getElementById("queueApp")?.classList.remove("hidden");
+  document.body.classList.remove("auth-pending");
   document.getElementById("queueIdentity").textContent =
     `${profile.nome} • ${profile.matricula}`;
 }
@@ -44,6 +45,7 @@ function showQueueApp(profile) {
 function showLogin() {
   document.getElementById("queueLogin")?.classList.remove("hidden");
   document.getElementById("queueApp")?.classList.add("hidden");
+  document.body.classList.remove("auth-pending");
 }
 
 function getCurrentItems() {
@@ -241,5 +243,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     handleDeleteQueueItem(button.dataset.queueId);
   });
 
-  await initializeQueuePage();
+  try {
+    await initializeQueuePage();
+  } catch (error) {
+    console.error("Erro ao inicializar página de filas:", error);
+    showLogin();
+    setAuthFeedback("Não foi possível validar sua sessão agora.", "error");
+  } finally {
+    document.body.classList.remove("auth-pending");
+  }
 });

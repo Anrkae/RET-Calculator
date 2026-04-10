@@ -47,6 +47,7 @@ let deletedMappingIds = [];
 let activePanel = "queues";
 let isSidebarCollapsed = false;
 let hasUnsavedChanges = false;
+let savedStateSnapshot = "";
 const WPP_QR_POLL_ATTEMPTS = 8;
 const WPP_QR_POLL_DELAY_MS = 3000;
 
@@ -101,11 +102,7 @@ function getWhatsappConfig() {
 }
 
 function getSavedSnapshot() {
-  return JSON.stringify({
-    settings: normalizeSettings(botSettings || {}),
-    mappings: normalizeMappings(supervisorGroups),
-    deletedMappingIds: []
-  });
+  return savedStateSnapshot;
 }
 
 function getCurrentSnapshot() {
@@ -420,6 +417,7 @@ function setActivePanel(target) {
 function showToolApp(profile) {
   document.getElementById("toolLogin")?.classList.add("hidden");
   document.getElementById("toolApp")?.classList.remove("hidden");
+  document.body.classList.remove("auth-pending");
 
   const identity = document.getElementById("toolIdentity");
   if (identity) {
@@ -432,6 +430,7 @@ function showToolApp(profile) {
 function showLogin() {
   document.getElementById("toolLogin")?.classList.remove("hidden");
   document.getElementById("toolApp")?.classList.add("hidden");
+  document.body.classList.remove("auth-pending");
 }
 
 function renderBotSettings() {
@@ -572,6 +571,11 @@ async function loadControlData() {
   botSettings = settings;
   supervisorGroups = mappings;
   deletedMappingIds = [];
+  savedStateSnapshot = JSON.stringify({
+    settings: normalizeSettings(botSettings || {}),
+    mappings: normalizeMappings(supervisorGroups),
+    deletedMappingIds: []
+  });
   hasUnsavedChanges = false;
 
   renderSupervisorMappings();
@@ -768,5 +772,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   applySidebarState();
   setActivePanel(activePanel);
   syncSaveButtonState();
-  await initializeControlPage();
+  try {
+    await initializeControlPage();
+  } catch (error) {
+    console.error("Erro ao inicializar painel da ferramenta:", error);
+    showLogin();
+    setAuthFeedback("Nao foi possivel validar sua sessao agora.", "error");
+  } finally {
+    document.body.classList.remove("auth-pending");
+  }
 });

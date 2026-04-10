@@ -20,6 +20,10 @@ body.dark-theme {
     padding: 30px;
 }
 
+body.auth-pending > * {
+    visibility: hidden;
+}
+
 .hidden {
     display: none !important;
 }

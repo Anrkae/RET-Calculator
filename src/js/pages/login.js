@@ -22,6 +22,10 @@ function redirectToDashboard() {
   window.location.href = "./pages/dashboard.html";
 }
 
+function revealPage() {
+  document.body.classList.remove("auth-pending");
+}
+
 function setFeedback(message = "", type = "info") {
   const feedback = document.getElementById("authFeedback");
 
@@ -161,15 +165,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const nameInput = document.getElementById("nameInput");
   const continueButton = document.getElementById("continueButton");
   const backButton = document.getElementById("backButton");
+  let shouldReveal = true;
 
-  const profile = await loadCurrentProfile();
+  try {
+    const profile = await loadCurrentProfile();
 
-  if (profile) {
-    redirectToDashboard();
-    return;
+    if (profile) {
+      shouldReveal = false;
+      redirectToDashboard();
+      return;
+    }
+
+    setMode(authModes.lookup);
+  } finally {
+    if (shouldReveal) {
+      revealPage();
+    }
   }
-
-  setMode(authModes.lookup);
 
   continueButton?.addEventListener("click", handleContinue);
   backButton?.addEventListener("click", handleBack);
