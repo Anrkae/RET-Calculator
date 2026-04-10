@@ -1083,17 +1083,35 @@ function requestCancelObservation(context = {}) {
     );
 
     const observationInput = pipWindow.document.getElementById("observationInput");
-    const skipButton = pipWindow.document.getElementById("skipObservationBtn");
-    const saveButton = pipWindow.document.getElementById("saveObservationBtn");
+    const submitButton = pipWindow.document.getElementById("submitObservationBtn");
+    const syncSubmitButton = () => {
+      if (!submitButton) return;
 
-    skipButton?.addEventListener("click", () => {
-      finish("");
+      const hasObservation = Boolean(String(observationInput?.value || "").trim());
+      submitButton.innerHTML = hasObservation
+        ? "<span>Salvar observação</span>"
+        : "<span>Enviar sem observação</span>";
+    };
+
+    const handleSubmit = () => {
+      if (!submitButton || submitButton.classList.contains("loading")) return;
+
+      submitButton.disabled = true;
+      submitButton.classList.add("loading");
+      window.setTimeout(() => {
+        finish(observationInput?.value || "");
+      }, 450);
+    };
+
+    observationInput?.addEventListener("input", syncSubmitButton);
+    observationInput?.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        handleSubmit();
+      }
     });
+    submitButton?.addEventListener("click", handleSubmit);
 
-    saveButton?.addEventListener("click", () => {
-      finish(observationInput?.value || "");
-    });
-
+    syncSubmitButton();
     observationInput?.focus();
   });
 }

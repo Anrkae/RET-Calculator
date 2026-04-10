@@ -312,7 +312,7 @@ margin-bottom:4px;
 
 textarea{
 width:100%;
-min-height:108px;
+min-height:72px;
 padding:10px;
 border-radius:10px;
 background:#151515;
@@ -321,7 +321,7 @@ color:white;
 outline:none;
 font-size:12px;
 font-family:inherit;
-resize:none;
+resize:vertical;
 }
 
 textarea:focus{
@@ -337,6 +337,19 @@ cursor:pointer;
 font-size:12px;
 font-weight:600;
 width:100%;
+position:relative;
+overflow:hidden;
+transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+button:hover{
+transform:translateY(-1px);
+}
+
+button:disabled{
+opacity:0.82;
+cursor:wait;
+transform:none;
 }
 
 .primary{
@@ -354,8 +367,30 @@ border:1px solid rgba(255,255,255,0.08);
 .actions{
 display:flex;
 flex-direction:column;
-gap:8px;
+gap:0;
 margin-top:auto;
+}
+
+.loading::before{
+content:"";
+position:absolute;
+top:0;
+left:0;
+height:100%;
+width:100%;
+background:rgba(255,255,255,0.12);
+animation:loadbar 1.2s linear infinite;
+z-index:0;
+}
+
+button span{
+position:relative;
+z-index:1;
+}
+
+@keyframes loadbar{
+from{transform:translateX(-100%)}
+to{transform:translateX(100%)}
 }
 </style>
 
@@ -368,11 +403,9 @@ margin-top:auto;
 </div>
 
 <textarea id="observationInput" placeholder="Digite uma observação complementar, se necessário."></textarea>
-<p>Se você fechar este PiP sem salvar, o cancelamento seguirá sem observação.</p>
 
 <div class="actions">
-<button id="skipObservationBtn" class="ghost" type="button">Enviar sem observação</button>
-<button id="saveObservationBtn" class="primary" type="button">Salvar observação</button>
+<button id="submitObservationBtn" class="primary" type="button"><span>Enviar sem observação</span></button>
 </div>
 `;
 }
