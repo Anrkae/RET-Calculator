@@ -198,7 +198,6 @@
             <div class="tool-card-actions">
               <button id="refreshWhatsappStatusButton" class="ghost-button" type="button">Atualizar status</button>
               <button id="startWhatsappSessionButton" class="ghost-button compact-action" type="button">Iniciar sessao</button>
-              <button id="closeWhatsappSessionButton" class="ghost-button compact-action" type="button">Fechar sessao</button>
               <button id="generateWhatsappQrButton" class="primary-button compact-action" type="button">Gerar QR Code</button>
             </div>
           </article>
@@ -219,6 +218,26 @@
             </div>
           </article>
         </div>
+
+        <article class="tool-card">
+          <div class="tool-card-head">
+            <div>
+              <h4>Reset manual da sessao</h4>
+              <span>Use este fluxo quando o WPPConnect travar a reconexao ou nao liberar um novo QR.</span>
+            </div>
+          </div>
+
+          <div class="tool-manual-card">
+            <p>Na sua instalacao atual, o endpoint de fechar sessao do WPPConnect e instavel. Quando o bot travar, o caminho confiavel e resetar a sessao manualmente no Docker e depois gerar um token novo.</p>
+            <pre class="tool-code-block"><code>docker stop wpp-server
+Remove-Item -Recurse -Force "C:\whatsapp-automation\wppconnect_userData\equipe-ret"
+Remove-Item -Force "C:\whatsapp-automation\wppconnect_tokens\equipe-ret.data.json"
+docker start wpp-server</code></pre>
+            <pre class="tool-code-block"><code>Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:21465/api/equipe-ret/THISISMYSECURETOKEN/generate-token"</code></pre>
+          </div>
+        </article>
       </section>
 
       <section id="panel-templates" class="tool-panel hidden">

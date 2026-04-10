@@ -13,7 +13,6 @@ import {
 } from "../services/controle-service.js";
 import {
   checkSessionConnection,
-  closeSession,
   extractConnectionStatus,
   extractQrCode,
   getQrCodeSession,
@@ -375,47 +374,6 @@ async function handleGenerateWhatsappQr() {
   }
 }
 
-async function handleCloseWhatsappSession() {
-  try {
-    setWhatsappFeedback("Fechando a sessao atual do bot...", "success");
-    await closeSession(getWhatsappConfig());
-    renderWhatsappStatus(false, "Sessao fechada");
-    renderQrCode(
-      "",
-      "Sessao fechada",
-      "Agora voce pode iniciar a sessao novamente e gerar um novo QR Code."
-    );
-    setWhatsappFeedback("Sessao fechada com sucesso. Gere um novo QR Code para reconectar.", "success");
-  } catch (error) {
-    try {
-      const connectionResponse = await checkSessionConnection(getWhatsappConfig());
-      const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
-
-      if (!friendlyStatus.connected) {
-        renderWhatsappStatus(false, friendlyStatus.label || "Sessao fechada");
-        renderQrCode(
-          "",
-          "Sessao em transicao",
-          "A API retornou erro ao fechar, mas a sessao ja saiu do estado conectado."
-        );
-        setWhatsappFeedback("A API respondeu com erro, mas a sessao foi derrubada. Agora voce pode gerar um novo QR Code.", "success");
-        return;
-      }
-    } catch {
-      renderWhatsappStatus(false, "Sessao em transicao");
-      renderQrCode(
-        "",
-        "Sessao em transicao",
-        "A API falhou ao confirmar o fechamento, mas a sessao pode estar reiniciando internamente."
-      );
-      setWhatsappFeedback("O fechamento retornou erro, mas a sessao pode estar reiniciando. Aguarde alguns segundos e tente gerar o QR.", "error");
-      return;
-    }
-
-    setWhatsappFeedback(error.message || "Nao foi possivel fechar a sessao do bot.", "error");
-  }
-}
-
 function setActivePanel(target) {
   activePanel = target;
 
@@ -726,7 +684,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sidebarToggleButton = document.getElementById("toggleToolSidebarButton");
   const refreshWhatsappStatusButton = document.getElementById("refreshWhatsappStatusButton");
   const startWhatsappSessionButton = document.getElementById("startWhatsappSessionButton");
-  const closeWhatsappSessionButton = document.getElementById("closeWhatsappSessionButton");
   const generateWhatsappQrButton = document.getElementById("generateWhatsappQrButton");
 
   document.querySelectorAll("[data-panel-target]").forEach((button) => {
@@ -769,7 +726,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   refreshWhatsappStatusButton?.addEventListener("click", refreshWhatsappStatus);
   startWhatsappSessionButton?.addEventListener("click", handleStartWhatsappSession);
-  closeWhatsappSessionButton?.addEventListener("click", handleCloseWhatsappSession);
   generateWhatsappQrButton?.addEventListener("click", handleGenerateWhatsappQr);
 
   addMappingButton?.addEventListener("click", addSupervisorMappingRow);

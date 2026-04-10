@@ -110,15 +110,6 @@ async function getQrCodeSession({ baseUrl, sessionName, token }) {
   });
 }
 
-async function closeSession({ baseUrl, sessionName, token }) {
-  assertConfig(baseUrl, sessionName, token);
-
-  return requestJson(buildEndpoint(baseUrl, sessionName, token, "close-session"), {
-    method: "POST",
-    headers: buildHeaders(token)
-  });
-}
-
 function extractConnectionStatus(payload) {
   if (!payload || typeof payload !== "object") {
     return {
@@ -184,7 +175,6 @@ function extractQrCode(payload) {
 
 export {
   checkSessionConnection,
-  closeSession,
   extractConnectionStatus,
   extractQrCode,
   getQrCodeSession,

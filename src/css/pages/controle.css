@@ -554,6 +554,24 @@ textarea {
   outline: none;
 }
 
+.tool-manual-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tool-code-block {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(7, 15, 29, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d9e7ff;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 .tool-textarea {
   resize: vertical;
   min-height: 180px;
