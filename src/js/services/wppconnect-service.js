@@ -2,14 +2,42 @@ function normalizeBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
+function normalizeSessionName(value) {
+  return String(value || "").trim();
+}
+
+function normalizeToken(value) {
+  return String(value || "").trim();
+}
+
+function buildSessionIdentifier(sessionName, token) {
+  const normalizedSessionName = normalizeSessionName(sessionName);
+  const normalizedToken = normalizeToken(token);
+
+  if (!normalizedSessionName) {
+    throw new Error("Defina o nome da sessao do WPPConnect nas configuracoes do bot.");
+  }
+
+  if (!normalizedToken) {
+    throw new Error("Defina o token do WPPConnect nas configuracoes do bot.");
+  }
+
+  if (normalizedToken.startsWith(`${normalizedSessionName}:`)) {
+    return encodeURIComponent(normalizedToken);
+  }
+
+  return encodeURIComponent(normalizedSessionName);
+}
+
 function buildHeaders(token = "", extraHeaders = {}) {
+  const normalizedToken = normalizeToken(token);
   const headers = {
     Accept: "application/json",
     ...extraHeaders
   };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (normalizedToken && !normalizedToken.includes(":")) {
+    headers.Authorization = `Bearer ${normalizedToken}`;
   }
 
   return headers;
@@ -41,20 +69,19 @@ function assertConfig(baseUrl, sessionName, token) {
     throw new Error("Defina a Base do WPPConnect nas configuracoes do bot.");
   }
 
-  if (!String(sessionName || "").trim()) {
-    throw new Error("Defina o nome da sessao do WPPConnect nas configuracoes do bot.");
-  }
+  buildSessionIdentifier(sessionName, token);
+}
 
-  if (!String(token || "").trim()) {
-    throw new Error("Defina o bearer token do WPPConnect nas configuracoes do bot.");
-  }
+function buildEndpoint(baseUrl, sessionName, token, route) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+  const sessionIdentifier = buildSessionIdentifier(sessionName, token);
+  return `${normalizedBaseUrl}/api/${sessionIdentifier}/${route}`;
 }
 
 async function checkSessionConnection({ baseUrl, sessionName, token }) {
   assertConfig(baseUrl, sessionName, token);
 
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  return requestJson(`${normalizedBaseUrl}/api/${encodeURIComponent(sessionName)}/check-connection-session`, {
+  return requestJson(buildEndpoint(baseUrl, sessionName, token, "check-connection-session"), {
     method: "GET",
     headers: buildHeaders(token)
   });
@@ -63,8 +90,7 @@ async function checkSessionConnection({ baseUrl, sessionName, token }) {
 async function startSession({ baseUrl, sessionName, token, waitQrCode = true }) {
   assertConfig(baseUrl, sessionName, token);
 
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  return requestJson(`${normalizedBaseUrl}/api/${encodeURIComponent(sessionName)}/start-session`, {
+  return requestJson(buildEndpoint(baseUrl, sessionName, token, "start-session"), {
     method: "POST",
     headers: buildHeaders(token, {
       "Content-Type": "application/json"
@@ -78,8 +104,7 @@ async function startSession({ baseUrl, sessionName, token, waitQrCode = true }) 
 async function getQrCodeSession({ baseUrl, sessionName, token }) {
   assertConfig(baseUrl, sessionName, token);
 
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  return requestJson(`${normalizedBaseUrl}/api/${encodeURIComponent(sessionName)}/qrcode-session`, {
+  return requestJson(buildEndpoint(baseUrl, sessionName, token, "qrcode-session"), {
     method: "GET",
     headers: buildHeaders(token)
   });
