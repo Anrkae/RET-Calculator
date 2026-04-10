@@ -18,7 +18,7 @@
       <input id="toolPasswordInput" type="password" placeholder="Senha" autocomplete="current-password">
 
       <button id="toolLoginButton" class="primary-button" type="button">Entrar</button>
-      <a class="tool-link-inline" href="./admin.html" target="_blank" rel="noreferrer">Voltar para a gestão</a>
+      <a class="tool-link-inline" href="./admin.html" target="_blank" rel="noreferrer">Voltar para a gestao</a>
     </div>
   </div>
 
@@ -30,22 +30,43 @@
       </button>
 
       <div class="tool-brand">
-        <span class="tool-brand-kicker">Central de operação</span>
+        <span class="tool-brand-kicker">Central de operacao</span>
         <h1>Painel da Ferramenta</h1>
-        <p>Configuração, manutenção e expansão do bot operacional.</p>
+        <p>Configuracao, manutencao e expansao do bot operacional.</p>
       </div>
 
       <nav class="tool-nav">
-        <button class="tool-nav-button is-active" type="button" data-panel-target="queues">Controle das filas</button>
-        <button class="tool-nav-button" type="button" data-panel-target="whatsapp">Conexão WhatsApp</button>
-        <button class="tool-nav-button" type="button" data-panel-target="templates">Textos padrão</button>
-        <button class="tool-nav-button" type="button" data-panel-target="settings">Configurações do bot</button>
+        <button class="tool-nav-button is-active" type="button" data-panel-target="queues" title="Controle das filas">
+          <span class="tool-nav-icon">FI</span>
+          <span class="tool-nav-label">Controle das filas</span>
+        </button>
+        <button class="tool-nav-button" type="button" data-panel-target="whatsapp" title="Conexao WhatsApp">
+          <span class="tool-nav-icon">WA</span>
+          <span class="tool-nav-label">Conexao WhatsApp</span>
+        </button>
+        <button class="tool-nav-button" type="button" data-panel-target="templates" title="Textos padrao">
+          <span class="tool-nav-icon">TX</span>
+          <span class="tool-nav-label">Textos padrao</span>
+        </button>
+        <button class="tool-nav-button" type="button" data-panel-target="settings" title="Configuracoes do bot">
+          <span class="tool-nav-icon">CF</span>
+          <span class="tool-nav-label">Configuracoes do bot</span>
+        </button>
       </nav>
 
       <div class="tool-sidebar-footer">
-        <a class="tool-link-button" href="./admin.html" target="_blank" rel="noreferrer">Gestão</a>
-        <a class="tool-link-button" href="./filas.html" target="_blank" rel="noreferrer">Filas</a>
-        <button id="toolLogoutButton" class="tool-link-button" type="button">Sair</button>
+        <a class="tool-link-button" href="./admin.html" target="_blank" rel="noreferrer" title="Gestao">
+          <span class="tool-nav-icon">GE</span>
+          <span class="tool-link-label">Gestao</span>
+        </a>
+        <a class="tool-link-button" href="./filas.html" target="_blank" rel="noreferrer" title="Filas">
+          <span class="tool-nav-icon">FL</span>
+          <span class="tool-link-label">Filas</span>
+        </a>
+        <button id="toolLogoutButton" class="tool-link-button" type="button" title="Sair">
+          <span class="tool-nav-icon">SA</span>
+          <span class="tool-link-label">Sair</span>
+        </button>
       </div>
     </aside>
 
@@ -59,7 +80,7 @@
 
         <div class="tool-header-actions">
           <button id="refreshToolDataButton" class="ghost-button" type="button">Atualizar dados</button>
-          <button id="saveToolSettingsButton" class="primary-button hidden" type="button" disabled>Salvar alterações</button>
+          <button id="saveToolSettingsButton" class="primary-button hidden" type="button" disabled>Salvar alteracoes</button>
         </div>
       </header>
 
@@ -87,7 +108,7 @@
 
         <div class="panel-intro">
           <h3>Controle das filas</h3>
-          <p>Acompanhe rapidamente o volume das filas e use a página dedicada quando precisar agir item por item.</p>
+          <p>Acompanhe rapidamente o volume das filas e use a pagina dedicada quando precisar agir item por item.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
@@ -115,7 +136,7 @@
             <div class="tool-card-head">
               <div>
                 <h4>Fila de demandas</h4>
-                <span>Demandas formatadas para disparo e revisão</span>
+                <span>Demandas formatadas para disparo e revisao</span>
               </div>
               <span id="demandasStatusPill" class="status-pill status-info">0 pendentes</span>
             </div>
@@ -135,8 +156,8 @@
         <article class="tool-card">
           <div class="tool-card-head">
             <div>
-              <h4>Visão rápida de roteamento</h4>
-              <span>Prévia dos grupos ativos por supervisor responsável</span>
+              <h4>Visao rapida de roteamento</h4>
+              <span>Previa dos grupos ativos por supervisor responsavel</span>
             </div>
           </div>
 
@@ -152,23 +173,23 @@
 
       <section id="panel-whatsapp" class="tool-panel hidden">
         <div class="panel-intro">
-          <h3>Conexão da conta de WhatsApp</h3>
-          <p>Protótipo visual da área que vai concentrar status da sessão, QR Code e saúde da conta do bot.</p>
+          <h3>Conexao da conta de WhatsApp</h3>
+          <p>Prototipo visual da area que vai concentrar status da sessao, QR Code e saude da conta do bot.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
           <article class="tool-card">
             <div class="tool-card-head">
               <div>
-                <h4>Status da sessão</h4>
+                <h4>Status da sessao</h4>
                 <span>Conta que dispara mensagens operacionais</span>
               </div>
               <span class="status-pill status-success">Conectado</span>
             </div>
 
             <div class="meta-list">
-              <div><span>Instância</span><strong>equipe-ret</strong></div>
-              <div><span>Último pareamento</span><strong>09/04/2026 • 09:12</strong></div>
+              <div><span>Instancia</span><strong>equipe-ret</strong></div>
+              <div><span>Ultimo pareamento</span><strong>09/04/2026 • 09:12</strong></div>
               <div><span>Conta</span><strong>Bot Claro Ret</strong></div>
             </div>
 
@@ -181,14 +202,14 @@
           <article class="tool-card qr-card">
             <div class="tool-card-head">
               <div>
-                <h4>QR Code de conexão</h4>
-                <span>Espaço reservado para a reconexão do bot</span>
+                <h4>QR Code de conexao</h4>
+                <span>Espaco reservado para a reconexao do bot</span>
               </div>
             </div>
 
             <div class="qr-placeholder">
               <div class="qr-skeleton"></div>
-              <strong>QR indisponível neste passo</strong>
+              <strong>QR indisponivel neste passo</strong>
               <span>Vamos ligar essa parte ao WPPConnect em uma etapa separada.</span>
             </div>
           </article>
@@ -197,8 +218,8 @@
 
       <section id="panel-templates" class="tool-panel hidden">
         <div class="panel-intro">
-          <h3>Textos padrão</h3>
-          <p>Protótipo visual da biblioteca de mensagens para cancelamentos e demandas.</p>
+          <h3>Textos padrao</h3>
+          <p>Prototipo visual da biblioteca de mensagens para cancelamentos e demandas.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
@@ -210,40 +231,40 @@
               </div>
             </div>
 
-            <textarea class="tool-textarea" rows="8">*1° Cancelamento de Fulano* ❌
+            <textarea class="tool-textarea" rows="8">*1 grau Cancelamento de Fulano* ❌
 
-🗒️ *Motivo:* Mudança de endereço</textarea>
+🗒️ *Motivo:* Mudanca de endereco</textarea>
           </article>
 
           <article class="tool-card">
             <div class="tool-card-head">
               <div>
                 <h4>Demandas</h4>
-                <span>Blocos usados para Encaixe VT, Retirar Ponto e Suspensão</span>
+                <span>Blocos usados para Encaixe VT, Retirar Ponto e Suspensao</span>
               </div>
             </div>
 
             <textarea class="tool-textarea" rows="8">📌 *Fulano* - *Encaixe VT*
 
 📄 *000/123456789*
-📅 *10/04/2026* - *das 14h às 17h*
-👨🏾‍🔧 *Área X* - *Classe Y*</textarea>
+📅 *10/04/2026* - *das 14h as 17h*
+👨🏾‍🔧 *Area X* - *Classe Y*</textarea>
           </article>
         </div>
       </section>
 
       <section id="panel-settings" class="tool-panel hidden">
         <div class="panel-intro">
-          <h3>Configurações do bot</h3>
-          <p>Essa parte já está funcional para parâmetros base e mapeamento supervisor → grupo.</p>
+          <h3>Configuracoes do bot</h3>
+          <p>Essa parte ja esta funcional para parametros base e mapeamento supervisor para grupo.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
           <article class="tool-card">
             <div class="tool-card-head">
               <div>
-                <h4>Parâmetros globais</h4>
-                <span>Configurações estruturais do worker e do bot</span>
+                <h4>Parametros globais</h4>
+                <span>Configuracoes estruturais do worker e do bot</span>
               </div>
             </div>
 
@@ -253,7 +274,7 @@
                 <input id="settingsWorkerInterval" type="text" placeholder="5000">
               </label>
               <label class="tool-field">
-                <span>Grupo padrão de fallback</span>
+                <span>Grupo padrao de fallback</span>
                 <input id="settingsFallbackGroup" type="text" placeholder="1203...@g.us">
               </label>
               <label class="tool-field">
@@ -279,12 +300,12 @@
             <div class="tool-card-head">
               <div>
                 <h4>Resumo operacional</h4>
-                <span>Último estado salvo para a ferramenta</span>
+                <span>Ultimo estado salvo para a ferramenta</span>
               </div>
             </div>
 
             <div class="meta-list">
-              <div><span>Última atualização</span><strong id="settingsUpdatedAt">-</strong></div>
+              <div><span>Ultima atualizacao</span><strong id="settingsUpdatedAt">-</strong></div>
               <div><span>Supervisores configurados</span><strong id="settingsSupervisorCount">0</strong></div>
               <div><span>Roteamento com grupo ativo</span><strong id="settingsGroupCount">0</strong></div>
             </div>
@@ -294,7 +315,7 @@
         <article class="tool-card">
           <div class="tool-card-head">
             <div>
-              <h4>Mapeamento supervisor → grupo</h4>
+              <h4>Mapeamento supervisor para grupo</h4>
               <span>Defina qual grupo deve receber as mensagens de cada supervisor.</span>
             </div>
             <button id="addSupervisorMappingButton" class="ghost-button" type="button">Adicionar mapeamento</button>
@@ -305,8 +326,8 @@
               <span>Supervisor</span>
               <span>ID do grupo</span>
               <span>Ativo</span>
-              <span>Observação</span>
-              <span>Ação</span>
+              <span>Observacao</span>
+              <span>Acao</span>
             </div>
             <div id="supervisorMappingsList" class="mapping-stack"></div>
           </div>

@@ -112,6 +112,7 @@ textarea {
   flex-direction: column;
   gap: 28px;
   position: relative;
+  overflow: hidden;
 }
 
 .tool-sidebar-toggle {
@@ -173,9 +174,10 @@ textarea {
 
 .tool-shell.is-collapsed .tool-brand h1,
 .tool-shell.is-collapsed .tool-brand p,
-.tool-shell.is-collapsed .tool-brand-kicker,
-.tool-shell.is-collapsed .tool-link-button:not(#toolLogoutButton) {
+.tool-shell.is-collapsed .tool-brand-kicker {
   opacity: 0;
+  max-height: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -184,13 +186,18 @@ textarea {
   padding-right: 14px;
 }
 
+.tool-shell.is-collapsed .tool-brand {
+  min-height: 0;
+  gap: 0;
+}
+
 .tool-shell.is-collapsed .tool-nav-button {
-  min-height: 50px;
-  padding: 0 10px;
+  min-height: 54px;
+  padding: 0 12px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .tool-brand p,
@@ -209,6 +216,26 @@ textarea {
   gap: 10px;
 }
 
+.tool-nav-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cfe1ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.tool-nav-label,
+.tool-link-label {
+  white-space: nowrap;
+}
+
 .tool-nav-button,
 .ghost-button,
 .primary-button,
@@ -223,9 +250,12 @@ textarea {
 .tool-nav-button {
   width: 100%;
   text-align: left;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: transparent;
   color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .tool-nav-button:hover,
@@ -244,12 +274,26 @@ textarea {
 .tool-link-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 12px;
   text-decoration: none;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
   width: 100%;
+}
+
+.tool-shell.is-collapsed .tool-nav-label,
+.tool-shell.is-collapsed .tool-link-label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tool-shell.is-collapsed .tool-link-button,
+.tool-shell.is-collapsed .tool-nav-button {
+  justify-content: center;
 }
 
 .compact-link-button {
