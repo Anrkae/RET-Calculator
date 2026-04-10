@@ -48,6 +48,14 @@ let deletedMappingIds = [];
 let activePanel = "queues";
 let isSidebarCollapsed = false;
 let hasUnsavedChanges = false;
+const WPP_QR_POLL_ATTEMPTS = 8;
+const WPP_QR_POLL_DELAY_MS = 3000;
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 function normalizeSettings(settings = {}) {
   return {
@@ -303,51 +311,65 @@ async function handleGenerateWhatsappQr() {
   try {
     setWhatsappFeedback("Consultando QR Code da sessao...", "success");
     const config = getWhatsappConfig();
-    let response = await getQrCodeSession(config);
-    const qrCode = extractQrCode(response);
+    const connectionResponse = await checkSessionConnection(config);
+    const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
 
-    if (!qrCode) {
-      const message = String(response?.message || "").toLowerCase();
-      const status = String(response?.status || "").toLowerCase();
-
-      if (message.includes("not available") || status.includes("connected")) {
-        const connectionResponse = await checkSessionConnection(config);
-        const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
-
-        if (friendlyStatus.connected) {
-          renderWhatsappStatus(true, "Conectado");
-          renderQrCode(
-            "",
-            "Sessao conectada",
-            "Nao existe QR Code disponivel enquanto o bot estiver conectado."
-          );
-          setWhatsappFeedback("A sessao ja esta conectada, por isso nao ha QR para mostrar.", "success");
-          return;
-        }
-
-        setWhatsappFeedback("Sessao desconectada. Iniciando uma nova sessao para gerar QR...", "success");
-        response = await startSession({ ...config, waitQrCode: true });
-        const restartedQrCode = extractQrCode(response);
-
-        if (restartedQrCode) {
-          renderWhatsappStatus(false, "Aguardando QR");
-          renderQrCode(
-            restartedQrCode,
-            "QR Code pronto",
-            "Leia este QR Code no WhatsApp para reconectar a sessao."
-          );
-          setWhatsappFeedback("Nova sessao iniciada e QR Code gerado com sucesso.", "success");
-          return;
-        }
-      }
-
-      renderQrCode("", "QR nao encontrado", "A API respondeu, mas nao retornou uma imagem de QR Code nesta consulta.");
-      setWhatsappFeedback("Nao encontrei um QR Code valido nesta resposta.", "error");
+    if (friendlyStatus.connected) {
+      renderWhatsappStatus(true, "Conectado");
+      renderQrCode(
+        "",
+        "Sessao conectada",
+        "Nao existe QR Code disponivel enquanto o bot estiver conectado."
+      );
+      setWhatsappFeedback("A sessao ja esta conectada, por isso nao ha QR para mostrar.", "success");
       return;
     }
 
-    renderQrCode(qrCode, "QR Code pronto", "Leia este QR Code no WhatsApp para reconectar a sessao.");
-    setWhatsappFeedback("QR Code atualizado com sucesso.", "success");
+    setWhatsappFeedback("Sessao desconectada. Iniciando nova sessao e aguardando QR...", "success");
+    await startSession({ ...config, waitQrCode: true });
+
+    for (let attempt = 1; attempt <= WPP_QR_POLL_ATTEMPTS; attempt += 1) {
+      await wait(WPP_QR_POLL_DELAY_MS);
+      const response = await getQrCodeSession(config);
+      const qrCode = extractQrCode(response);
+
+      if (qrCode) {
+        renderWhatsappStatus(false, "Aguardando QR");
+        renderQrCode(
+          qrCode,
+          "QR Code pronto",
+          "Leia este QR Code no WhatsApp para reconectar a sessao."
+        );
+        setWhatsappFeedback("QR Code gerado com sucesso.", "success");
+        return;
+      }
+
+      const loopStatus = String(response?.status || "").toLowerCase();
+      const loopMessage = String(response?.message || "").toLowerCase();
+
+      if (loopStatus.includes("connected")) {
+        renderWhatsappStatus(true, "Conectado");
+        renderQrCode(
+          "",
+          "Sessao conectada",
+          "A sessao voltou a conectar antes de gerar um novo QR Code."
+        );
+        setWhatsappFeedback("A sessao reconectou automaticamente antes da exibicao do QR.", "success");
+        return;
+      }
+
+      if (loopStatus.includes("initializing") || loopMessage.includes("not available")) {
+        setWhatsappFeedback(`Preparando QR Code... tentativa ${attempt} de ${WPP_QR_POLL_ATTEMPTS}.`, "success");
+      }
+    }
+
+    renderWhatsappStatus(false, "Aguardando QR");
+    renderQrCode(
+      "",
+      "QR ainda nao disponivel",
+      "A sessao foi iniciada, mas o WPPConnect ainda nao entregou um QR Code nesta janela de espera."
+    );
+    setWhatsappFeedback("Ainda nao recebi o QR Code. Aguarde alguns segundos e tente novamente.", "error");
   } catch (error) {
     setWhatsappFeedback(error.message || "Nao foi possivel obter o QR Code da sessao.", "error");
   }
