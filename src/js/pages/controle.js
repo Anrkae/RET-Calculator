@@ -387,6 +387,31 @@ async function handleCloseWhatsappSession() {
     );
     setWhatsappFeedback("Sessao fechada com sucesso. Gere um novo QR Code para reconectar.", "success");
   } catch (error) {
+    try {
+      const connectionResponse = await checkSessionConnection(getWhatsappConfig());
+      const friendlyStatus = getFriendlyWhatsappStatus(connectionResponse);
+
+      if (!friendlyStatus.connected) {
+        renderWhatsappStatus(false, friendlyStatus.label || "Sessao fechada");
+        renderQrCode(
+          "",
+          "Sessao em transicao",
+          "A API retornou erro ao fechar, mas a sessao ja saiu do estado conectado."
+        );
+        setWhatsappFeedback("A API respondeu com erro, mas a sessao foi derrubada. Agora voce pode gerar um novo QR Code.", "success");
+        return;
+      }
+    } catch {
+      renderWhatsappStatus(false, "Sessao em transicao");
+      renderQrCode(
+        "",
+        "Sessao em transicao",
+        "A API falhou ao confirmar o fechamento, mas a sessao pode estar reiniciando internamente."
+      );
+      setWhatsappFeedback("O fechamento retornou erro, mas a sessao pode estar reiniciando. Aguarde alguns segundos e tente gerar o QR.", "error");
+      return;
+    }
+
     setWhatsappFeedback(error.message || "Nao foi possivel fechar a sessao do bot.", "error");
   }
 }
