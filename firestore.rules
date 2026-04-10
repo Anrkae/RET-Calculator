@@ -106,8 +106,8 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName == currentUserDoc().data.nome
-        && request.resource.data.supervisor == currentUserSupervisor();
+        && request.resource.data.operatorName is string
+        && request.resource.data.supervisor is string;
 
       allow read: if currentUserExists()
         && (resource.data.uid == request.auth.uid || isAdmin());
@@ -134,8 +134,8 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName == currentUserDoc().data.nome
-        && request.resource.data.supervisor == currentUserSupervisor()
+        && request.resource.data.operatorName is string
+        && request.resource.data.supervisor is string
         && request.resource.data.status == 'pending';
 
       allow read, delete: if isAdmin();
@@ -165,8 +165,8 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName == currentUserDoc().data.nome
-        && request.resource.data.supervisor == currentUserSupervisor()
+        && request.resource.data.operatorName is string
+        && request.resource.data.supervisor is string
         && request.resource.data.status == 'pending';
 
       allow read, delete: if isAdmin();
