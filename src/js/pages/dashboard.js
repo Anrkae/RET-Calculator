@@ -21,11 +21,11 @@ let selectedDemandType = "";
 let selectedDemandDate = "";
 let demandCalendarMonth = new Date().getMonth();
 let demandCalendarYear = new Date().getFullYear();
-let activeDashboardTab = "overview";
 const DASHBOARD_PREFERENCES_KEY = "ret-dashboard-preferences";
 const DEFAULT_DASHBOARD_PREFERENCES = {
   autoOpenPipOnPageChange: true,
-  askObservationOnCancel: false
+  askObservationOnCancel: false,
+  showContractFieldOnCancel: true
 };
 let dashboardPreferences = loadDashboardPreferences();
 
@@ -140,6 +140,8 @@ function renderDashboardPreferences() {
   const autoOpenState = document.getElementById("prefAutoOpenPipState");
   const observationInput = document.getElementById("prefAskCancelObservation");
   const observationState = document.getElementById("prefAskCancelObservationState");
+  const contractInput = document.getElementById("prefShowCancelContract");
+  const contractState = document.getElementById("prefShowCancelContractState");
 
   if (autoOpenInput) {
     autoOpenInput.checked = Boolean(dashboardPreferences.autoOpenPipOnPageChange);
@@ -156,21 +158,18 @@ function renderDashboardPreferences() {
   if (observationState) {
     observationState.textContent = dashboardPreferences.askObservationOnCancel ? "Ativado" : "Desativado";
   }
+
+  if (contractInput) {
+    contractInput.checked = Boolean(dashboardPreferences.showContractFieldOnCancel);
+  }
+
+  if (contractState) {
+    contractState.textContent = dashboardPreferences.showContractFieldOnCancel ? "Ativado" : "Desativado";
+  }
 }
 
-function setDashboardTab(tab) {
-  activeDashboardTab = tab;
-
-  const showOverview = tab === "overview";
-  const overviewTabButton = document.getElementById("showOverviewTab");
-  const preferencesTabButton = document.getElementById("showPreferencesTab");
-
-  document.getElementById("dashboardOverviewTab")?.classList.toggle("hidden", !showOverview);
-  document.getElementById("dashboardOverviewHistoryTab")?.classList.toggle("hidden", !showOverview);
-  document.getElementById("dashboardPreferencesTab")?.classList.toggle("hidden", showOverview);
-
-  overviewTabButton?.classList.toggle("is-active", showOverview);
-  preferencesTabButton?.classList.toggle("is-active", !showOverview);
+function shouldShowCancelContractField() {
+  return Boolean(dashboardPreferences.showContractFieldOnCancel);
 }
 
 function buildDayOptions() {
@@ -1237,13 +1236,24 @@ function prepareCanceladoState(doc) {
     reasonSelect.classList.add("fade-in");
   }
 
-  if (contractFieldLabel) {
-    contractFieldLabel.classList.remove("hidden");
-  }
+  if (shouldShowCancelContractField()) {
+    if (contractFieldLabel) {
+      contractFieldLabel.classList.remove("hidden");
+    }
 
-  if (contractInput) {
-    contractInput.classList.remove("hidden");
-    contractInput.classList.add("fade-in");
+    if (contractInput) {
+      contractInput.classList.remove("hidden");
+      contractInput.classList.add("fade-in");
+    }
+  } else {
+    if (contractFieldLabel) {
+      contractFieldLabel.classList.add("hidden");
+    }
+
+    if (contractInput) {
+      contractInput.classList.add("hidden");
+      contractInput.value = "";
+    }
   }
 
   if (confirmBtn) {
@@ -1431,6 +1441,20 @@ function closeLogoutModal() {
   modal?.classList.add("hidden");
 }
 
+function openPreferencesModal() {
+  const modal = document.getElementById("preferencesModal");
+
+  if (!modal) return;
+
+  renderDashboardPreferences();
+  modal.classList.remove("hidden");
+  document.getElementById("prefAutoOpenPip")?.focus();
+}
+
+function closePreferencesModal() {
+  document.getElementById("preferencesModal")?.classList.add("hidden");
+}
+
 async function initializeDashboard() {
   currentProfile = await loadCurrentProfile();
 
@@ -1464,12 +1488,15 @@ window.addEventListener("resize", () => {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const logoutButton = document.getElementById("logoutButton");
+  const openPreferencesButton = document.getElementById("openPreferencesButton");
   const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
   const openPipButton = document.getElementById("openPipButton");
   const openDemandButton = document.getElementById("openDemandButton");
   const modal = document.getElementById("logoutModal");
+  const preferencesModal = document.getElementById("preferencesModal");
   const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
   const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
+  const closePreferencesModalBtn = document.getElementById("closePreferencesModalBtn");
   const demandModal = document.getElementById("demandModal");
   const demandTypeTrigger = document.getElementById("demandTypeTrigger");
   const demandTypeMenu = document.getElementById("demandTypeMenu");
@@ -1479,15 +1506,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const submitDemandBtn = document.getElementById("submitDemandBtn");
   const prefAutoOpenPip = document.getElementById("prefAutoOpenPip");
   const prefAskCancelObservation = document.getElementById("prefAskCancelObservation");
-  const showOverviewTab = document.getElementById("showOverviewTab");
-  const showPreferencesTab = document.getElementById("showPreferencesTab");
+  const prefShowCancelContract = document.getElementById("prefShowCancelContract");
 
   logoutButton?.addEventListener("click", openLogoutModal);
+  openPreferencesButton?.addEventListener("click", openPreferencesModal);
   toggleHistoryBtn?.addEventListener("click", toggleHistory);
   openPipButton?.addEventListener("click", openFloatingPanel);
   openDemandButton?.addEventListener("click", openDemandModal);
   cancelLogoutBtn?.addEventListener("click", closeLogoutModal);
   confirmLogoutBtn?.addEventListener("click", performLogout);
+  closePreferencesModalBtn?.addEventListener("click", closePreferencesModal);
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
@@ -1497,11 +1525,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   prefAskCancelObservation?.addEventListener("change", () => {
     updateDashboardPreference("askObservationOnCancel", Boolean(prefAskCancelObservation.checked));
   });
-  showOverviewTab?.addEventListener("click", () => {
-    setDashboardTab("overview");
-  });
-  showPreferencesTab?.addEventListener("click", () => {
-    setDashboardTab("preferences");
+  prefShowCancelContract?.addEventListener("change", () => {
+    updateDashboardPreference("showContractFieldOnCancel", Boolean(prefShowCancelContract.checked));
   });
   demandDynamicFields?.addEventListener("input", handleDemandFieldFormatting);
   demandTypeTrigger?.addEventListener("click", () => {
@@ -1528,6 +1553,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  preferencesModal?.addEventListener("click", (event) => {
+    if (event.target === preferencesModal) {
+      closePreferencesModal();
+    }
+  });
+
   demandModal?.addEventListener("click", (event) => {
     if (event.target === demandModal) {
       closeDemandModal();
@@ -1551,11 +1582,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
       closeLogoutModal();
     }
+    if (event.key === "Escape" && preferencesModal && !preferencesModal.classList.contains("hidden")) {
+      closePreferencesModal();
+    }
     if (event.key === "Escape" && demandModal && !demandModal.classList.contains("hidden")) {
       closeDemandModal();
     }
   });
 
-  setDashboardTab(activeDashboardTab);
   await initializeDashboard();
 });
