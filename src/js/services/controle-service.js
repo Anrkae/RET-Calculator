@@ -13,6 +13,15 @@ const BOT_SETTINGS_COLLECTION = "configuracoesBot";
 const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
 const DEFAULT_SETTINGS_DOC = "default";
 
+function defaultTextTemplates() {
+  return {
+    cancelamento: "❌ *{{cancelCountOfDay}}° Cancelamento de {{operatorName}}*\n{{contract}}\n\n*Motivo:* {{reason}}\n\n{{observation}}",
+    demandaEncaixeVt: "📌 *{{operatorName}}* - *Encaixe VT*\n\n📄 *{{contract}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*\n👨🏾‍🔧 *{{area}}* - *{{classe}}*",
+    demandaRetirarPonto: "📌 *{{operatorName}}* - *Retirar Ponto Virtua*\n\n📄 *{{contract}}*\n🔢 *Ponto {{point}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*",
+    demandaSuspensao: "📌 *{{operatorName}}* - *Suspensão Temporária:* *({{suspensionItems}})*\n\n📄 *{{contract}}*"
+  };
+}
+
 function defaultBotSettings() {
   return {
     workerIntervalMs: "5000",
@@ -23,11 +32,25 @@ function defaultBotSettings() {
     wppconnectSessionName: "equipe-ret",
     wppconnectBearerToken: "",
     n8nBaseUrl: "http://localhost:5678",
-    textTemplates: {
-      cancelamento: "*1° Cancelamento de Fulano* ❌\n\n🗒️ *Motivo:* Mudança de endereço",
-      demanda: "📌 *Fulano* - *Encaixe VT*\n\n📄 *000/123456789*\n📅 *10/04/2026* - *das 14h às 17h*\n👨🏾‍🔧 *Área X* - *Classe Y*"
-    },
+    textTemplates: defaultTextTemplates(),
     updatedAt: ""
+  };
+}
+
+function normalizeBotSettings(payload = {}) {
+  const rawTextTemplates = payload?.textTemplates || {};
+  const textTemplates = {
+    ...defaultTextTemplates(),
+    ...(rawTextTemplates.demanda && !rawTextTemplates.demandaEncaixeVt
+      ? { demandaEncaixeVt: rawTextTemplates.demanda }
+      : {}),
+    ...rawTextTemplates
+  };
+
+  return {
+    ...defaultBotSettings(),
+    ...payload,
+    textTemplates
   };
 }
 
@@ -38,16 +61,12 @@ async function loadBotSettings() {
     return defaultBotSettings();
   }
 
-  return {
-    ...defaultBotSettings(),
-    ...snapshot.data()
-  };
+  return normalizeBotSettings(snapshot.data());
 }
 
 async function saveBotSettings(settings) {
   await setDoc(doc(db, BOT_SETTINGS_COLLECTION, DEFAULT_SETTINGS_DOC), {
-    ...defaultBotSettings(),
-    ...settings,
+    ...normalizeBotSettings(settings),
     updatedAt: new Date().toISOString()
   });
 }

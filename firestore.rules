@@ -32,6 +32,20 @@ service cloud.firestore {
       return tag in ['cr', 'adm'];
     }
 
+    function validDashboardPreferences(preferences) {
+      return preferences == null || (
+        preferences is map
+        && preferences.keys().hasOnly([
+          'autoOpenPipOnPageChange',
+          'askObservationOnCancel',
+          'showContractFieldOnCancel'
+        ])
+        && (!('autoOpenPipOnPageChange' in preferences) || preferences.autoOpenPipOnPageChange is bool)
+        && (!('askObservationOnCancel' in preferences) || preferences.askObservationOnCancel is bool)
+        && (!('showContractFieldOnCancel' in preferences) || preferences.showContractFieldOnCancel is bool)
+      );
+    }
+
     match /usuarios/{uid} {
       allow create: if isOwnUser(uid)
         && request.resource.data.keys().hasOnly([
@@ -40,6 +54,7 @@ service cloud.firestore {
           'nome',
           'tag',
           'supervisor',
+          'dashboardPreferences',
           'email',
           'createdAt',
           'updatedAt'
@@ -48,35 +63,64 @@ service cloud.firestore {
         && request.resource.data.matricula is string
         && request.resource.data.nome is string
         && request.resource.data.email is string
+        && request.resource.data.tag == 'cr'
         && request.resource.data.supervisor is string
-        && validTag(request.resource.data.tag);
+        && request.resource.data.supervisor == ''
+        && validDashboardPreferences(request.resource.data.dashboardPreferences);
 
-      allow read: if isOwnUser(uid) || isAdmin();
+      allow get: if isOwnUser(uid) || isAdmin();
+      allow list: if isAdmin();
 
-      allow update: if isAdmin()
-        && request.resource.data.keys().hasOnly([
-          'uid',
-          'matricula',
-          'nome',
-          'tag',
-          'supervisor',
-          'email',
-          'createdAt',
-          'updatedAt'
-        ])
-        && resource.data.uid == request.resource.data.uid
-        && resource.data.matricula == request.resource.data.matricula
-        && resource.data.nome == request.resource.data.nome
-        && resource.data.email == request.resource.data.email
-        && resource.data.createdAt == request.resource.data.createdAt
-        && request.resource.data.supervisor is string
-        && validTag(request.resource.data.tag);
+      allow update: if (
+          isOwnUser(uid)
+          && request.resource.data.keys().hasOnly([
+            'uid',
+            'matricula',
+            'nome',
+            'tag',
+            'supervisor',
+            'dashboardPreferences',
+            'email',
+            'createdAt',
+            'updatedAt'
+          ])
+          && resource.data.uid == request.resource.data.uid
+          && resource.data.matricula == request.resource.data.matricula
+          && resource.data.nome == request.resource.data.nome
+          && resource.data.email == request.resource.data.email
+          && resource.data.createdAt == request.resource.data.createdAt
+          && resource.data.tag == request.resource.data.tag
+          && resource.data.supervisor == request.resource.data.supervisor
+          && validDashboardPreferences(request.resource.data.dashboardPreferences)
+        ) || (
+          isAdmin()
+          && request.resource.data.keys().hasOnly([
+            'uid',
+            'matricula',
+            'nome',
+            'tag',
+            'supervisor',
+            'dashboardPreferences',
+            'email',
+            'createdAt',
+            'updatedAt'
+          ])
+          && resource.data.uid == request.resource.data.uid
+          && resource.data.matricula == request.resource.data.matricula
+          && resource.data.nome == request.resource.data.nome
+          && resource.data.email == request.resource.data.email
+          && resource.data.createdAt == request.resource.data.createdAt
+          && request.resource.data.supervisor is string
+          && validTag(request.resource.data.tag)
+          && validDashboardPreferences(request.resource.data.dashboardPreferences)
+        );
 
       allow delete: if false;
     }
 
     match /loginIndex/{matricula} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if false;
 
       allow create: if currentUserExists()
         && request.resource.data.keys().hasOnly(['uid', 'matricula', 'email', 'createdAt'])

@@ -41,7 +41,9 @@ const SETTINGS_FIELD_IDS = [
 ];
 const TEMPLATE_FIELD_IDS = [
   "templateCancelamento",
-  "templateDemanda"
+  "templateDemandaEncaixeVt",
+  "templateDemandaRetirarPonto",
+  "templateDemandaSuspensao"
 ];
 
 let currentProfile = null;
@@ -85,9 +87,13 @@ function normalizeMappings(mappings = []) {
 }
 
 function normalizeTextTemplates(textTemplates = {}) {
+  const fallbackDemanda = String(textTemplates.demanda || "").trim();
+
   return {
     cancelamento: String(textTemplates.cancelamento || "").trim(),
-    demanda: String(textTemplates.demanda || "").trim()
+    demandaEncaixeVt: String(textTemplates.demandaEncaixeVt || fallbackDemanda || "").trim(),
+    demandaRetirarPonto: String(textTemplates.demandaRetirarPonto || "").trim(),
+    demandaSuspensao: String(textTemplates.demandaSuspensao || "").trim()
   };
 }
 
@@ -107,7 +113,9 @@ function readCurrentSettingsForm() {
 function readCurrentTemplatesForm() {
   return {
     cancelamento: document.getElementById("templateCancelamento")?.value.trim() || "",
-    demanda: document.getElementById("templateDemanda")?.value.trim() || ""
+    demandaEncaixeVt: document.getElementById("templateDemandaEncaixeVt")?.value.trim() || "",
+    demandaRetirarPonto: document.getElementById("templateDemandaRetirarPonto")?.value.trim() || "",
+    demandaSuspensao: document.getElementById("templateDemandaSuspensao")?.value.trim() || ""
   };
 }
 
@@ -477,14 +485,24 @@ function renderTextTemplates() {
   const templates = normalizeTextTemplates(botSettings?.textTemplates || {});
 
   const cancelamentoField = document.getElementById("templateCancelamento");
-  const demandaField = document.getElementById("templateDemanda");
+  const demandaEncaixeVtField = document.getElementById("templateDemandaEncaixeVt");
+  const demandaRetirarPontoField = document.getElementById("templateDemandaRetirarPonto");
+  const demandaSuspensaoField = document.getElementById("templateDemandaSuspensao");
 
   if (cancelamentoField) {
     cancelamentoField.value = templates.cancelamento;
   }
 
-  if (demandaField) {
-    demandaField.value = templates.demanda;
+  if (demandaEncaixeVtField) {
+    demandaEncaixeVtField.value = templates.demandaEncaixeVt;
+  }
+
+  if (demandaRetirarPontoField) {
+    demandaRetirarPontoField.value = templates.demandaRetirarPonto;
+  }
+
+  if (demandaSuspensaoField) {
+    demandaSuspensaoField.value = templates.demandaSuspensao;
   }
 }
 
