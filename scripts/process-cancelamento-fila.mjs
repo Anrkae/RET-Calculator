@@ -9,6 +9,12 @@ const DEFAULT_INTERVAL_MS = 5000;
 const BOT_SETTINGS_COLLECTION = "configuracoesBot";
 const BOT_SETTINGS_DOC = "default";
 const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
+const DEFAULT_TEXT_TEMPLATES = {
+  cancelamento: "❌ *{{cancelCountOfDay}}° Cancelamento de {{operatorName}}*\n{{contract}}\n\n*Motivo:* {{reason}}\n\n{{observation}}",
+  demandaEncaixeVt: "📌 *{{operatorName}}* - *Encaixe VT*\n\n📄 *{{contract}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*\n👨🏾‍🔧 *{{area}}* - *{{classe}}*",
+  demandaRetirarPonto: "📌 *{{operatorName}}* - *Retirar Ponto Virtua*\n\n📄 *{{contract}}*\n🔢 *Ponto {{point}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*",
+  demandaSuspensao: "📌 *{{operatorName}}* - *Suspensão Temporária:* *({{suspensionItems}})*\n\n📄 *{{contract}}*"
+};
 
 function getArgValue(flag) {
   const index = process.argv.indexOf(flag);
@@ -112,6 +118,95 @@ function buildWppconnectRequest(settings) {
     url: `${baseUrl}/api/${sessionIdentifier}/send-message`,
     headers
   };
+}
+
+function normalizeTextTemplates(settings = {}) {
+  const rawTemplates = settings?.textTemplates || {};
+  const demandaEncaixeVt =
+    rawTemplates.demandaEncaixeVt ||
+    rawTemplates.demanda ||
+    DEFAULT_TEXT_TEMPLATES.demandaEncaixeVt;
+
+  return {
+    cancelamento: String(rawTemplates.cancelamento || DEFAULT_TEXT_TEMPLATES.cancelamento),
+    demandaEncaixeVt: String(demandaEncaixeVt),
+    demandaRetirarPonto: String(
+      rawTemplates.demandaRetirarPonto || DEFAULT_TEXT_TEMPLATES.demandaRetirarPonto
+    ),
+    demandaSuspensao: String(
+      rawTemplates.demandaSuspensao || DEFAULT_TEXT_TEMPLATES.demandaSuspensao
+    )
+  };
+}
+
+function formatSuspensionItems(items = []) {
+  const sanitizedItems = items
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  if (!sanitizedItems.length) return "";
+  if (sanitizedItems.length === 1) return sanitizedItems[0];
+  if (sanitizedItems.length === 2) return sanitizedItems.join(" e ");
+  return `${sanitizedItems.slice(0, -1).join(", ")} e ${sanitizedItems.at(-1)}`;
+}
+
+function renderTemplate(template, values = {}) {
+  return String(template || "").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key) => {
+    const value = values[key];
+    return value == null ? "" : String(value);
+  }).trim();
+}
+
+function buildCancelamentoMessage(data, settings) {
+  const templates = normalizeTextTemplates(settings);
+
+  return renderTemplate(templates.cancelamento, {
+    cancelCountOfDay: data.cancelCountOfDay || "",
+    operator: data.operator || "",
+    operatorName: data.operatorName || data.operator || "",
+    reason: data.reason || "",
+    contract: data.contract || "",
+    observation: data.observation || "",
+    duration: data.duration || "",
+    time: data.time || "",
+    supervisor: data.supervisor || ""
+  });
+}
+
+function buildDemandaMessage(data, settings) {
+  const templates = normalizeTextTemplates(settings);
+
+  if (data.demandType === "encaixe-vt") {
+    return renderTemplate(templates.demandaEncaixeVt, {
+      operator: data.operator || "",
+      operatorName: data.operatorName || data.operator || "",
+      contract: data.contract || "",
+      date: data.date || "",
+      startHour: data.startHour || "",
+      endHour: data.endHour || "",
+      area: data.area || "",
+      classe: data.classe || ""
+    });
+  }
+
+  if (data.demandType === "retirar-ponto") {
+    return renderTemplate(templates.demandaRetirarPonto, {
+      operator: data.operator || "",
+      operatorName: data.operatorName || data.operator || "",
+      contract: data.contract || "",
+      date: data.date || "",
+      startHour: data.startHour || "",
+      endHour: data.endHour || "",
+      point: data.point || ""
+    });
+  }
+
+  return renderTemplate(templates.demandaSuspensao, {
+    operator: data.operator || "",
+    operatorName: data.operatorName || data.operator || "",
+    contract: data.contract || "",
+    suspensionItems: formatSuspensionItems(data.suspensionItems || [])
+  });
 }
 
 async function loadRuntimeConfig(db) {
@@ -220,8 +315,10 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
 
     try {
       const whatsappRequest = buildWppconnectRequest(runtimeConfig.settings);
+      const message = buildCancelamentoMessage(data, runtimeConfig.settings);
 
       await sendWebhook(webhookUrl, {
+        message,
         operator: data.operator,
         operatorName: data.operatorName,
         cancelCountOfDay: data.cancelCountOfDay,
@@ -281,9 +378,10 @@ async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
 
     try {
       const whatsappRequest = buildWppconnectRequest(runtimeConfig.settings);
+      const message = buildDemandaMessage(data, runtimeConfig.settings);
 
       await sendWebhook(webhookUrl, {
-        message: data.message,
+        message,
         supervisor: data.supervisor || "",
         groupId: routing.groupId,
         routingMode: routing.routingMode,
