@@ -21,26 +21,35 @@ let selectedDemandType = "";
 let selectedDemandDate = "";
 let demandCalendarMonth = new Date().getMonth();
 let demandCalendarYear = new Date().getFullYear();
-const DASHBOARD_PREFERENCES_KEY = "ret-dashboard-preferences";
+const DASHBOARD_PREFERENCES_KEY = "ret-dashboard-preferences-v2";
 const DEFAULT_DASHBOARD_PREFERENCES = {
-  autoOpenPipOnPageChange: true,
+  autoOpenPipOnPageChange: false,
   askObservationOnCancel: false,
-  showContractFieldOnCancel: true
+  showContractFieldOnCancel: false
 };
 let dashboardPreferences = loadDashboardPreferences();
+let draftDashboardPreferences = null;
+
+function normalizeDashboardPreferences(value = {}) {
+  return {
+    autoOpenPipOnPageChange: Boolean(value.autoOpenPipOnPageChange),
+    askObservationOnCancel: Boolean(value.askObservationOnCancel),
+    showContractFieldOnCancel: Boolean(value.showContractFieldOnCancel)
+  };
+}
 
 function loadDashboardPreferences() {
   try {
     const raw = window.localStorage.getItem(DASHBOARD_PREFERENCES_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
 
-    return {
+    return normalizeDashboardPreferences({
       ...DEFAULT_DASHBOARD_PREFERENCES,
       ...parsed
-    };
+    });
   } catch (error) {
     console.error("Erro ao carregar preferências da dashboard:", error);
-    return { ...DEFAULT_DASHBOARD_PREFERENCES };
+    return normalizeDashboardPreferences(DEFAULT_DASHBOARD_PREFERENCES);
   }
 }
 
@@ -58,6 +67,13 @@ function updateDashboardPreference(key, value) {
   };
   persistDashboardPreferences();
   renderDashboardPreferences();
+}
+
+function hasPreferenceChanges() {
+  if (!draftDashboardPreferences) return false;
+
+  return JSON.stringify(normalizeDashboardPreferences(dashboardPreferences))
+    !== JSON.stringify(normalizeDashboardPreferences(draftDashboardPreferences));
 }
 
 const demandTemplates = {
@@ -136,40 +152,66 @@ const demandTemplates = {
 };
 
 function renderDashboardPreferences() {
+  const currentPreferences = normalizeDashboardPreferences(
+    draftDashboardPreferences || dashboardPreferences
+  );
   const autoOpenInput = document.getElementById("prefAutoOpenPip");
   const autoOpenState = document.getElementById("prefAutoOpenPipState");
   const observationInput = document.getElementById("prefAskCancelObservation");
   const observationState = document.getElementById("prefAskCancelObservationState");
   const contractInput = document.getElementById("prefShowCancelContract");
   const contractState = document.getElementById("prefShowCancelContractState");
+  const savePreferencesBtn = document.getElementById("savePreferencesBtn");
 
   if (autoOpenInput) {
-    autoOpenInput.checked = Boolean(dashboardPreferences.autoOpenPipOnPageChange);
+    autoOpenInput.checked = currentPreferences.autoOpenPipOnPageChange;
   }
 
   if (autoOpenState) {
-    autoOpenState.textContent = dashboardPreferences.autoOpenPipOnPageChange ? "Ativado" : "Desativado";
+    autoOpenState.textContent = currentPreferences.autoOpenPipOnPageChange ? "Ativado" : "Desativado";
   }
 
   if (observationInput) {
-    observationInput.checked = Boolean(dashboardPreferences.askObservationOnCancel);
+    observationInput.checked = currentPreferences.askObservationOnCancel;
   }
 
   if (observationState) {
-    observationState.textContent = dashboardPreferences.askObservationOnCancel ? "Ativado" : "Desativado";
+    observationState.textContent = currentPreferences.askObservationOnCancel ? "Ativado" : "Desativado";
   }
 
   if (contractInput) {
-    contractInput.checked = Boolean(dashboardPreferences.showContractFieldOnCancel);
+    contractInput.checked = currentPreferences.showContractFieldOnCancel;
   }
 
   if (contractState) {
-    contractState.textContent = dashboardPreferences.showContractFieldOnCancel ? "Ativado" : "Desativado";
+    contractState.textContent = currentPreferences.showContractFieldOnCancel ? "Ativado" : "Desativado";
+  }
+
+  if (savePreferencesBtn) {
+    savePreferencesBtn.disabled = !hasPreferenceChanges();
   }
 }
 
 function shouldShowCancelContractField() {
   return Boolean(dashboardPreferences.showContractFieldOnCancel);
+}
+
+function updateDraftDashboardPreference(key, value) {
+  draftDashboardPreferences = normalizeDashboardPreferences({
+    ...(draftDashboardPreferences || dashboardPreferences),
+    [key]: value
+  });
+  renderDashboardPreferences();
+}
+
+function saveDashboardPreferences() {
+  if (!draftDashboardPreferences) return;
+
+  dashboardPreferences = normalizeDashboardPreferences(draftDashboardPreferences);
+  persistDashboardPreferences();
+  draftDashboardPreferences = normalizeDashboardPreferences(dashboardPreferences);
+  renderDashboardPreferences();
+  closePreferencesModal();
 }
 
 function buildDayOptions() {
@@ -1446,12 +1488,14 @@ function openPreferencesModal() {
 
   if (!modal) return;
 
+  draftDashboardPreferences = normalizeDashboardPreferences(dashboardPreferences);
   renderDashboardPreferences();
   modal.classList.remove("hidden");
   document.getElementById("prefAutoOpenPip")?.focus();
 }
 
 function closePreferencesModal() {
+  draftDashboardPreferences = null;
   document.getElementById("preferencesModal")?.classList.add("hidden");
 }
 
@@ -1497,6 +1541,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const cancelLogoutBtn = document.getElementById("cancelLogoutBtn");
   const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
   const closePreferencesModalBtn = document.getElementById("closePreferencesModalBtn");
+  const savePreferencesBtn = document.getElementById("savePreferencesBtn");
   const demandModal = document.getElementById("demandModal");
   const demandTypeTrigger = document.getElementById("demandTypeTrigger");
   const demandTypeMenu = document.getElementById("demandTypeMenu");
@@ -1516,17 +1561,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   cancelLogoutBtn?.addEventListener("click", closeLogoutModal);
   confirmLogoutBtn?.addEventListener("click", performLogout);
   closePreferencesModalBtn?.addEventListener("click", closePreferencesModal);
+  savePreferencesBtn?.addEventListener("click", saveDashboardPreferences);
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
   prefAutoOpenPip?.addEventListener("change", () => {
-    updateDashboardPreference("autoOpenPipOnPageChange", Boolean(prefAutoOpenPip.checked));
+    updateDraftDashboardPreference("autoOpenPipOnPageChange", Boolean(prefAutoOpenPip.checked));
   });
   prefAskCancelObservation?.addEventListener("change", () => {
-    updateDashboardPreference("askObservationOnCancel", Boolean(prefAskCancelObservation.checked));
+    updateDraftDashboardPreference("askObservationOnCancel", Boolean(prefAskCancelObservation.checked));
   });
   prefShowCancelContract?.addEventListener("change", () => {
-    updateDashboardPreference("showContractFieldOnCancel", Boolean(prefShowCancelContract.checked));
+    updateDraftDashboardPreference("showContractFieldOnCancel", Boolean(prefShowCancelContract.checked));
   });
   demandDynamicFields?.addEventListener("input", handleDemandFieldFormatting);
   demandTypeTrigger?.addEventListener("click", () => {
