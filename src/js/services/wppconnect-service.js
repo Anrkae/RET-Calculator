@@ -1,5 +1,11 @@
 function normalizeBaseUrl(value) {
-  return String(value || "").trim().replace(/\/+$/, "");
+  const normalized = String(value || "").trim().replace(/\/+$/, "");
+
+  if (typeof window !== "undefined" && normalized.includes("host.docker.internal")) {
+    return normalized.replace("host.docker.internal", "localhost");
+  }
+
+  return normalized;
 }
 
 function normalizeSessionName(value) {
