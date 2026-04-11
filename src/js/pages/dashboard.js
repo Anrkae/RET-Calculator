@@ -5,7 +5,8 @@ import {
 } from "../services/atendimentos-service.js";
 import {
   loadCurrentProfile,
-  logoutOperator
+  logoutOperator,
+  saveUserDashboardPreferences
 } from "../services/auth-service.js";
 
 let pipWindow = null;
@@ -21,13 +22,12 @@ let selectedDemandType = "";
 let selectedDemandDate = "";
 let demandCalendarMonth = new Date().getMonth();
 let demandCalendarYear = new Date().getFullYear();
-const DASHBOARD_PREFERENCES_KEY = "ret-dashboard-preferences-v2";
 const DEFAULT_DASHBOARD_PREFERENCES = {
   autoOpenPipOnPageChange: false,
   askObservationOnCancel: false,
   showContractFieldOnCancel: false
 };
-let dashboardPreferences = loadDashboardPreferences();
+let dashboardPreferences = normalizeDashboardPreferences(DEFAULT_DASHBOARD_PREFERENCES);
 let draftDashboardPreferences = null;
 
 function normalizeDashboardPreferences(value = {}) {
@@ -205,13 +205,31 @@ function updateDraftDashboardPreference(key, value) {
 }
 
 function saveDashboardPreferences() {
-  if (!draftDashboardPreferences) return;
+  if (!draftDashboardPreferences || !currentProfile?.uid) return;
 
-  dashboardPreferences = normalizeDashboardPreferences(draftDashboardPreferences);
-  persistDashboardPreferences();
-  draftDashboardPreferences = normalizeDashboardPreferences(dashboardPreferences);
-  renderDashboardPreferences();
-  closePreferencesModal();
+  const normalizedPreferences = normalizeDashboardPreferences(draftDashboardPreferences);
+  const saveButton = document.getElementById("savePreferencesBtn");
+
+  if (saveButton) {
+    saveButton.disabled = true;
+  }
+
+  saveUserDashboardPreferences(currentProfile.uid, normalizedPreferences)
+    .then(() => {
+      dashboardPreferences = normalizedPreferences;
+      draftDashboardPreferences = normalizeDashboardPreferences(dashboardPreferences);
+      currentProfile = {
+        ...currentProfile,
+        dashboardPreferences
+      };
+      renderDashboardPreferences();
+      closePreferencesModal();
+    })
+    .catch((error) => {
+      console.error("Erro ao salvar preferências da dashboard:", error);
+      alert("Nao foi possivel salvar suas preferencias agora.");
+      renderDashboardPreferences();
+    });
 }
 
 function buildDayOptions() {
@@ -1509,6 +1527,10 @@ async function initializeDashboard() {
 
   document.getElementById("dashboard")?.classList.remove("hidden");
   renderOperatorInfo();
+  dashboardPreferences = normalizeDashboardPreferences({
+    ...DEFAULT_DASHBOARD_PREFERENCES,
+    ...(currentProfile.dashboardPreferences || {})
+  });
   renderDashboardPreferences();
 
   history = await buscarLigacoes(currentProfile);

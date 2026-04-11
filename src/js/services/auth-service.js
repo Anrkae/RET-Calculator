@@ -129,6 +129,11 @@ async function registerOperator({ matricula, password, nome }) {
     nome: trimmedName,
     tag: "cr",
     supervisor: "",
+    dashboardPreferences: {
+      autoOpenPipOnPageChange: false,
+      askObservationOnCancel: false,
+      showContractFieldOnCancel: false
+    },
     email: buildSyntheticEmail(normalizedMatricula),
     createdAt: nowIso,
     updatedAt: nowIso
@@ -188,6 +193,21 @@ async function loadCurrentProfile() {
   return getUserProfileByUid(currentUser.uid);
 }
 
+async function saveUserDashboardPreferences(uid, preferences) {
+  if (!uid) {
+    throw new Error("Nao consegui identificar o usuario para salvar as preferencias.");
+  }
+
+  await updateDoc(doc(db, USERS_COLLECTION, uid), {
+    dashboardPreferences: {
+      autoOpenPipOnPageChange: Boolean(preferences?.autoOpenPipOnPageChange),
+      askObservationOnCancel: Boolean(preferences?.askObservationOnCancel),
+      showContractFieldOnCancel: Boolean(preferences?.showContractFieldOnCancel)
+    },
+    updatedAt: new Date().toISOString()
+  });
+}
+
 async function logoutOperator() {
   await signOut(auth);
 }
@@ -225,6 +245,7 @@ export {
   logoutOperator,
   matriculaHasAccess,
   registerOperator,
+  saveUserDashboardPreferences,
   searchUserByMatricula,
   updateUserAccess
 };
