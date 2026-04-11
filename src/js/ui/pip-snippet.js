@@ -143,6 +143,8 @@ outline:none;
 font-size:12px;
 font-family:inherit;
 transition:border-color .2s ease, box-shadow .2s ease, opacity .2s ease, transform .2s ease;
+-webkit-user-select:text;
+user-select:text;
 }
 
 textarea{
@@ -322,6 +324,8 @@ outline:none;
 font-size:12px;
 font-family:inherit;
 resize:vertical;
+-webkit-user-select:text;
+user-select:text;
 }
 
 textarea:focus{
