@@ -243,7 +243,7 @@ docker start wpp-server</code></pre>
       <section id="panel-templates" class="tool-panel hidden">
         <div class="panel-intro">
           <h3>Textos padrao</h3>
-          <p>Prototipo visual da biblioteca de mensagens para cancelamentos e demandas.</p>
+          <p>Biblioteca central da ferramenta para consulta e manutencao dos textos operacionais.</p>
         </div>
 
         <div class="tool-grid tool-grid-2">
@@ -255,7 +255,7 @@ docker start wpp-server</code></pre>
               </div>
             </div>
 
-            <textarea class="tool-textarea" rows="8">*1 grau Cancelamento de Fulano* ❌
+            <textarea id="templateCancelamento" class="tool-textarea" rows="8" placeholder="Defina o texto padrao de cancelamento">*1 grau Cancelamento de Fulano* ❌
 
 🗒️ *Motivo:* Mudanca de endereco</textarea>
           </article>
@@ -268,7 +268,7 @@ docker start wpp-server</code></pre>
               </div>
             </div>
 
-            <textarea class="tool-textarea" rows="8">📌 *Fulano* - *Encaixe VT*
+            <textarea id="templateDemanda" class="tool-textarea" rows="8" placeholder="Defina o texto padrao de demanda">📌 *Fulano* - *Encaixe VT*
 
 📄 *000/123456789*
 📅 *10/04/2026* - *das 14h as 17h*

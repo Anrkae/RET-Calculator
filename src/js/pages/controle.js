@@ -39,6 +39,10 @@ const SETTINGS_FIELD_IDS = [
   "settingsWppconnectBearerToken",
   "settingsN8nBaseUrl"
 ];
+const TEMPLATE_FIELD_IDS = [
+  "templateCancelamento",
+  "templateDemanda"
+];
 
 let currentProfile = null;
 let botSettings = null;
@@ -80,6 +84,13 @@ function normalizeMappings(mappings = []) {
   }));
 }
 
+function normalizeTextTemplates(textTemplates = {}) {
+  return {
+    cancelamento: String(textTemplates.cancelamento || "").trim(),
+    demanda: String(textTemplates.demanda || "").trim()
+  };
+}
+
 function readCurrentSettingsForm() {
   return {
     workerIntervalMs: document.getElementById("settingsWorkerInterval")?.value.trim() || "",
@@ -90,6 +101,13 @@ function readCurrentSettingsForm() {
     wppconnectSessionName: document.getElementById("settingsWppconnectSessionName")?.value.trim() || "",
     wppconnectBearerToken: document.getElementById("settingsWppconnectBearerToken")?.value.trim() || "",
     n8nBaseUrl: document.getElementById("settingsN8nBaseUrl")?.value.trim() || ""
+  };
+}
+
+function readCurrentTemplatesForm() {
+  return {
+    cancelamento: document.getElementById("templateCancelamento")?.value.trim() || "",
+    demanda: document.getElementById("templateDemanda")?.value.trim() || ""
   };
 }
 
@@ -108,6 +126,7 @@ function getSavedSnapshot() {
 function getCurrentSnapshot() {
   return JSON.stringify({
     settings: normalizeSettings(readCurrentSettingsForm()),
+    templates: normalizeTextTemplates(readCurrentTemplatesForm()),
     mappings: normalizeMappings(supervisorGroups),
     deletedMappingIds: [...deletedMappingIds].sort()
   });
@@ -117,8 +136,9 @@ function syncSaveButtonState() {
   const saveButton = document.getElementById("saveToolSettingsButton");
   if (!saveButton) return;
 
-  saveButton.classList.toggle("hidden", activePanel !== "settings");
-  saveButton.disabled = activePanel !== "settings" || !hasUnsavedChanges;
+  const canSave = activePanel === "settings" || activePanel === "templates";
+  saveButton.classList.toggle("hidden", !canSave);
+  saveButton.disabled = !canSave || !hasUnsavedChanges;
 }
 
 function recalculateDirtyState() {
@@ -453,6 +473,21 @@ function renderBotSettings() {
   renderWhatsappShell();
 }
 
+function renderTextTemplates() {
+  const templates = normalizeTextTemplates(botSettings?.textTemplates || {});
+
+  const cancelamentoField = document.getElementById("templateCancelamento");
+  const demandaField = document.getElementById("templateDemanda");
+
+  if (cancelamentoField) {
+    cancelamentoField.value = templates.cancelamento;
+  }
+
+  if (demandaField) {
+    demandaField.value = templates.demanda;
+  }
+}
+
 function renderSupervisorMappings() {
   const list = document.getElementById("supervisorMappingsList");
   const preview = document.getElementById("queueRoutingPreview");
@@ -573,6 +608,7 @@ async function loadControlData() {
   deletedMappingIds = [];
   savedStateSnapshot = JSON.stringify({
     settings: normalizeSettings(botSettings || {}),
+    templates: normalizeTextTemplates(botSettings?.textTemplates || {}),
     mappings: normalizeMappings(supervisorGroups),
     deletedMappingIds: []
   });
@@ -580,6 +616,7 @@ async function loadControlData() {
 
   renderSupervisorMappings();
   renderBotSettings();
+  renderTextTemplates();
   renderWhatsappStatus(false, "Nao verificado");
   renderQrCode();
   await refreshOverview();
@@ -597,7 +634,10 @@ async function handleSaveSettings() {
   }
 
   try {
-    await saveBotSettings(readCurrentSettingsForm());
+    await saveBotSettings({
+      ...readCurrentSettingsForm(),
+      textTemplates: readCurrentTemplatesForm()
+    });
 
     for (const item of sanitizedMappings) {
       if (item.id) {
@@ -765,6 +805,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   SETTINGS_FIELD_IDS.forEach((fieldId) => {
+    document.getElementById(fieldId)?.addEventListener("input", recalculateDirtyState);
+    document.getElementById(fieldId)?.addEventListener("change", recalculateDirtyState);
+  });
+
+  TEMPLATE_FIELD_IDS.forEach((fieldId) => {
     document.getElementById(fieldId)?.addEventListener("input", recalculateDirtyState);
     document.getElementById(fieldId)?.addEventListener("change", recalculateDirtyState);
   });

@@ -23,6 +23,10 @@ function defaultBotSettings() {
     wppconnectSessionName: "equipe-ret",
     wppconnectBearerToken: "",
     n8nBaseUrl: "http://localhost:5678",
+    textTemplates: {
+      cancelamento: "*1° Cancelamento de Fulano* ❌\n\n🗒️ *Motivo:* Mudança de endereço",
+      demanda: "📌 *Fulano* - *Encaixe VT*\n\n📄 *000/123456789*\n📅 *10/04/2026* - *das 14h às 17h*\n👨🏾‍🔧 *Área X* - *Classe Y*"
+    },
     updatedAt: ""
   };
 }
