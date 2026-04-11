@@ -12,6 +12,10 @@ import { db } from "./firebase-config.js";
 const BOT_SETTINGS_COLLECTION = "configuracoesBot";
 const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
 const DEFAULT_SETTINGS_DOC = "default";
+const LEGACY_TEXT_TEMPLATES = {
+  cancelamento: "*1° Cancelamento de Fulano* ❌\n\n🗒️ *Motivo:* Mudança de endereço",
+  demanda: "📌 *Fulano* - *Encaixe VT*\n\n📄 *000/123456789*\n📅 *10/04/2026* - *das 14h às 17h*\n👨🏾‍🔧 *Área X* - *Classe Y*"
+};
 
 function defaultTextTemplates() {
   return {
@@ -37,8 +41,26 @@ function defaultBotSettings() {
   };
 }
 
+function sanitizeLegacyTextTemplates(textTemplates = {}) {
+  const sanitized = { ...textTemplates };
+
+  if (sanitized.cancelamento === LEGACY_TEXT_TEMPLATES.cancelamento) {
+    delete sanitized.cancelamento;
+  }
+
+  if (sanitized.demanda === LEGACY_TEXT_TEMPLATES.demanda) {
+    delete sanitized.demanda;
+  }
+
+  if (sanitized.demandaEncaixeVt === LEGACY_TEXT_TEMPLATES.demanda) {
+    delete sanitized.demandaEncaixeVt;
+  }
+
+  return sanitized;
+}
+
 function normalizeBotSettings(payload = {}) {
-  const rawTextTemplates = payload?.textTemplates || {};
+  const rawTextTemplates = sanitizeLegacyTextTemplates(payload?.textTemplates || {});
   const textTemplates = {
     ...defaultTextTemplates(),
     ...(rawTextTemplates.demanda && !rawTextTemplates.demandaEncaixeVt
