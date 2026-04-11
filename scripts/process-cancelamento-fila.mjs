@@ -55,6 +55,65 @@ function normalizeSupervisor(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function normalizeBaseUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function normalizeSessionName(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function normalizeToken(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function buildSessionIdentifier(sessionName, token) {
+  const normalizedSessionName = normalizeSessionName(sessionName);
+  const normalizedToken = normalizeToken(token);
+
+  if (!normalizedSessionName) {
+    throw new Error("Defina o nome da sessao do WPPConnect nas configuracoes do bot.");
+  }
+
+  if (!normalizedToken) {
+    throw new Error("Defina o token do WPPConnect nas configuracoes do bot.");
+  }
+
+  if (normalizedToken.startsWith(`${normalizedSessionName}:`)) {
+    return encodeURIComponent(normalizedToken);
+  }
+
+  return encodeURIComponent(normalizedSessionName);
+}
+
+function buildWppconnectRequest(settings) {
+  const baseUrl = normalizeBaseUrl(settings?.wppconnectBaseUrl);
+  const sessionName = normalizeSessionName(settings?.wppconnectSessionName);
+  const token = normalizeToken(settings?.wppconnectBearerToken);
+
+  if (!baseUrl) {
+    throw new Error("Defina a Base do WPPConnect nas configuracoes do bot.");
+  }
+
+  const sessionIdentifier = buildSessionIdentifier(sessionName, token);
+  const headers = {
+    accept: "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7"
+  };
+
+  if (token && !token.includes(":")) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return {
+    baseUrl,
+    sessionName,
+    sessionIdentifier,
+    tokenMode: token.includes(":") ? "path" : "bearer",
+    url: `${baseUrl}/api/${sessionIdentifier}/send-message`,
+    headers
+  };
+}
+
 async function loadRuntimeConfig(db) {
   const [settingsSnap, mappingsSnap] = await Promise.all([
     db.collection(BOT_SETTINGS_COLLECTION).doc(BOT_SETTINGS_DOC).get(),
@@ -160,6 +219,8 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
     }
 
     try {
+      const whatsappRequest = buildWppconnectRequest(runtimeConfig.settings);
+
       await sendWebhook(webhookUrl, {
         operator: data.operator,
         operatorName: data.operatorName,
@@ -171,7 +232,8 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
         time: data.time,
         supervisor: data.supervisor || "",
         groupId: routing.groupId,
-        routingMode: routing.routingMode
+        routingMode: routing.routingMode,
+        whatsappRequest
       });
 
       await docSnap.ref.update({
@@ -218,11 +280,14 @@ async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
     }
 
     try {
+      const whatsappRequest = buildWppconnectRequest(runtimeConfig.settings);
+
       await sendWebhook(webhookUrl, {
         message: data.message,
         supervisor: data.supervisor || "",
         groupId: routing.groupId,
-        routingMode: routing.routingMode
+        routingMode: routing.routingMode,
+        whatsappRequest
       });
 
       await docSnap.ref.update({
