@@ -1,3 +1,12 @@
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function createPipPanelMarkup(matricula) {
   return `
 <style>
@@ -214,8 +223,8 @@ to{width:100%}
 }
 </style>
 
-<h3 id="statusTitle">Disponível</h3>
-<div class="sub">Operador: ${matricula}</div>
+<h3 id="statusTitle">Disponivel</h3>
+<div class="sub">Operador: ${escapeHtml(matricula)}</div>
 
 <div class="timer-wrap">
 <div id="timer" class="timer hidden">00:00</div>
@@ -236,8 +245,8 @@ to{width:100%}
 <option value="">Selecione o motivo</option>
 <option>Atendimento</option>
 <option>Produto</option>
-<option>Técnico</option>
-<option>Mudança de endereço</option>
+<option>Tecnico</option>
+<option>Mudanca de endereco</option>
 <option>021</option>
 </select>
 
@@ -398,18 +407,18 @@ to{transform:translateX(100%)}
 }
 </style>
 
-<h3>Observação do cancelamento</h3>
-<p>Operador: ${matricula}</p>
+<h3>Observacao do cancelamento</h3>
+<p>Operador: ${escapeHtml(matricula)}</p>
 
 <div class="context">
-<strong>Motivo: ${context.reason || "-"}</strong>
-<span>Contrato: ${context.contract || "não informado"}</span>
+<strong>Motivo: ${escapeHtml(context.reason || "-")}</strong>
+<span>Contrato: ${escapeHtml(context.contract || "nao informado")}</span>
 </div>
 
-<textarea id="observationInput" placeholder="Digite uma observação complementar, se necessário."></textarea>
+<textarea id="observationInput" placeholder="Digite uma observacao complementar, se necessario."></textarea>
 
 <div class="actions">
-<button id="submitObservationBtn" class="primary" type="button"><span>Enviar sem observação</span></button>
+<button id="submitObservationBtn" class="primary" type="button"><span>Enviar sem observacao</span></button>
 </div>
 `;
 }

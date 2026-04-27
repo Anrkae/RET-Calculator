@@ -107,13 +107,13 @@ async function handleLogin() {
     });
 
     if (!result.exists) {
-      setFeedback("Seu acesso foi encontrado, mas não consegui carregar o perfil. Tente novamente em alguns instantes.", "error");
+      setFeedback("Seu acesso foi encontrado, mas nao consegui carregar o perfil. Tente novamente em alguns instantes.", "error");
       return;
     }
 
     redirectToDashboard();
   } catch (error) {
-    setFeedback(error.message || "Não foi possível entrar.", "error");
+    setFeedback(error.message || "Nao foi possivel entrar.", "error");
   }
 }
 
@@ -128,15 +128,16 @@ async function handleRegister() {
       password: passwordInput?.value || ""
     });
 
+    setFeedback("Cadastro criado e enviado para notificacao de aprovacao.", "success");
     redirectToDashboard();
   } catch (error) {
-    if (error.message === "Esse Almope já possui acesso.") {
-      setFeedback("Esse Almope já possui acesso. Digite sua senha para entrar.", "error");
+    if (error.message === "Esse Almope ja possui acesso.") {
+      setFeedback("Esse Almope ja possui acesso. Digite sua senha para entrar.", "error");
       setMode(authModes.login);
       return;
     }
 
-    setFeedback(error.message || "Não consegui criar seu acesso agora. Tente novamente.", "error");
+    setFeedback(error.message || "Nao consegui criar seu acesso agora. Tente novamente.", "error");
   }
 }
 

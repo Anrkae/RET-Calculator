@@ -9,6 +9,7 @@ const DEFAULT_INTERVAL_MS = 5000;
 const BOT_SETTINGS_COLLECTION = "configuracoesBot";
 const BOT_SETTINGS_DOC = "default";
 const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
+const ACCESS_REQUESTS_COLLECTION = "solicitacoesAcesso";
 const DEFAULT_TEXT_TEMPLATES = {
   cancelamento: "❌ *{{cancelCountOfDay}}° Cancelamento de {{operatorName}}*\n{{contract}}\n\n*Motivo:* {{reason}}\n\n{{observation}}",
   demandaEncaixeVt: "📌 *{{operatorName}}* - *Encaixe VT*\n\n📄 *{{contract}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*\n👨🏾‍🔧 *{{area}}* - *{{classe}}*",
@@ -209,6 +210,19 @@ function buildDemandaMessage(data, settings) {
   });
 }
 
+function buildAccessRequestMessage(data) {
+  return [
+    "🔐 *Nova solicitacao de acesso*",
+    "",
+    `*Nome:* ${data.nome || "-"}`,
+    `*Almope:* ${data.matricula || "-"}`,
+    `*Email:* ${data.email || "-"}`,
+    `*Solicitado em:* ${data.requestedAt || "-"}`,
+    "",
+    "Revise o cadastro e aprove ou reprovar no painel administrativo."
+  ].join("\n");
+}
+
 async function loadRuntimeConfig(db) {
   const [settingsSnap, mappingsSnap] = await Promise.all([
     db.collection(BOT_SETTINGS_COLLECTION).doc(BOT_SETTINGS_DOC).get(),
@@ -357,6 +371,68 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
   }
 }
 
+async function processAccessRequests(db, webhookUrl, runtimeConfig, cliOptions) {
+  const snapshot = await db
+    .collection(ACCESS_REQUESTS_COLLECTION)
+    .where("notificationStatus", "==", "pending")
+    .limit(20)
+    .get();
+
+  if (snapshot.empty) return;
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data();
+    const groupId = String(
+      cliOptions.fallbackGroupId || runtimeConfig.settings.fallbackGroupId || ""
+    ).trim();
+
+    if (!groupId) {
+      await docSnap.ref.update({
+        notificationStatus: "blocked_no_target",
+        lastError: "Nenhum grupo padrao configurado para notificacoes de acesso.",
+        lastAttemptAt: new Date().toISOString()
+      });
+      console.log(`Solicitacao de acesso bloqueada: ${docSnap.id} -> sem grupo padrao`);
+      continue;
+    }
+
+    try {
+      const whatsappRequest = buildWppconnectRequest(runtimeConfig.settings);
+      const message = buildAccessRequestMessage(data);
+
+      await sendWebhook(webhookUrl, {
+        message,
+        groupId,
+        routingMode: "access_request_notification",
+        accessRequestId: docSnap.id,
+        matricula: data.matricula || "",
+        nome: data.nome || "",
+        email: data.email || "",
+        whatsappRequest
+      });
+
+      await docSnap.ref.update({
+        notificationStatus: "notified",
+        notifiedAt: new Date().toISOString(),
+        notificationAttempts: (data.notificationAttempts || 0) + 1,
+        lastError: null,
+        targetGroupId: groupId
+      });
+
+      console.log(`Solicitacao de acesso notificada: ${docSnap.id} -> ${groupId}`);
+    } catch (error) {
+      await docSnap.ref.update({
+        notificationAttempts: (data.notificationAttempts || 0) + 1,
+        lastAttemptAt: new Date().toISOString(),
+        lastError: error.message,
+        targetGroupId: groupId
+      });
+
+      console.error(`Falha ao notificar solicitacao de acesso ${docSnap.id}: ${error.message}`);
+    }
+  }
+}
+
 async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
   const snapshot = await db
     .collection("demandasFila")
@@ -425,6 +501,7 @@ async function processQueues(db, cliOptions) {
     cliOptions.demandaWebhookUrl || DEFAULT_DEMANDA_WEBHOOK_URL
   );
 
+  await processAccessRequests(db, demandaWebhookUrl, runtimeConfig, cliOptions);
   await processCancelamentos(db, cancelamentoWebhookUrl, runtimeConfig, cliOptions);
   await processDemandas(db, demandaWebhookUrl, runtimeConfig, cliOptions);
 }

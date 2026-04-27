@@ -18,18 +18,23 @@ service cloud.firestore {
       return currentUserExists() && currentUserDoc().data.tag == 'adm';
     }
 
-    function currentUserSupervisor() {
-      return currentUserDoc().data.supervisor is string
-        ? currentUserDoc().data.supervisor
-        : '';
-    }
-
     function isOwnUser(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
     function validTag(tag) {
       return tag in ['cr', 'adm'];
+    }
+
+    function safeText(value, maxChars) {
+      return value is string
+        && value.size() <= maxChars
+        && !value.matches('.*[<>].*');
+    }
+
+    function validContract(value) {
+      return value is string
+        && (value == '' || value.matches('^\\d{3}/\\d{9}$'));
     }
 
     function validDashboardPreferences(preferences) {
@@ -46,6 +51,58 @@ service cloud.firestore {
       );
     }
 
+    function validBotSettings(data) {
+      return data.keys().hasOnly([
+          'workerIntervalMs',
+          'fallbackGroupId',
+          'cancelamentoWebhookPath',
+          'demandaWebhookPath',
+          'wppconnectBaseUrl',
+          'wppconnectSessionName',
+          'wppconnectBearerToken',
+          'n8nBaseUrl',
+          'textTemplates',
+          'updatedAt'
+        ])
+        && safeText(data.workerIntervalMs, 16)
+        && safeText(data.fallbackGroupId, 128)
+        && safeText(data.cancelamentoWebhookPath, 256)
+        && safeText(data.demandaWebhookPath, 256)
+        && safeText(data.wppconnectBaseUrl, 256)
+        && safeText(data.wppconnectSessionName, 64)
+        && safeText(data.wppconnectBearerToken, 512)
+        && safeText(data.n8nBaseUrl, 256)
+        && data.updatedAt is string
+        && data.textTemplates is map
+        && data.textTemplates.keys().hasOnly([
+          'cancelamento',
+          'demanda',
+          'demandaEncaixeVt',
+          'demandaRetirarPonto',
+          'demandaSuspensao'
+        ])
+        && (!('cancelamento' in data.textTemplates) || safeText(data.textTemplates.cancelamento, 1500))
+        && (!('demanda' in data.textTemplates) || safeText(data.textTemplates.demanda, 1500))
+        && (!('demandaEncaixeVt' in data.textTemplates) || safeText(data.textTemplates.demandaEncaixeVt, 1500))
+        && (!('demandaRetirarPonto' in data.textTemplates) || safeText(data.textTemplates.demandaRetirarPonto, 1500))
+        && (!('demandaSuspensao' in data.textTemplates) || safeText(data.textTemplates.demandaSuspensao, 1500));
+    }
+
+    function validSupervisorGroup(data) {
+      return data.keys().hasOnly([
+          'supervisor',
+          'groupId',
+          'enabled',
+          'notes',
+          'updatedAt'
+        ])
+        && safeText(data.supervisor, 80)
+        && safeText(data.groupId, 128)
+        && data.enabled is bool
+        && safeText(data.notes, 300)
+        && data.updatedAt is string;
+    }
+
     match /usuarios/{uid} {
       allow create: if isOwnUser(uid)
         && request.resource.data.keys().hasOnly([
@@ -60,8 +117,8 @@ service cloud.firestore {
           'updatedAt'
         ])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.matricula is string
-        && request.resource.data.nome is string
+        && safeText(request.resource.data.matricula, 20)
+        && safeText(request.resource.data.nome, 120)
         && request.resource.data.email is string
         && request.resource.data.tag == 'cr'
         && request.resource.data.supervisor is string
@@ -110,7 +167,7 @@ service cloud.firestore {
           && resource.data.nome == request.resource.data.nome
           && resource.data.email == request.resource.data.email
           && resource.data.createdAt == request.resource.data.createdAt
-          && request.resource.data.supervisor is string
+          && safeText(request.resource.data.supervisor, 80)
           && validTag(request.resource.data.tag)
           && validDashboardPreferences(request.resource.data.dashboardPreferences)
         );
@@ -126,6 +183,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'matricula', 'email', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.matricula == matricula
+        && safeText(request.resource.data.matricula, 20)
         && request.resource.data.email == currentUserDoc().data.email;
 
       allow update, delete: if false;
@@ -152,10 +210,14 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName is string
-        && request.resource.data.supervisor is string
-        && request.resource.data.contract is string
-        && request.resource.data.observation is string;
+        && safeText(request.resource.data.operatorName, 120)
+        && safeText(request.resource.data.supervisor, 80)
+        && safeText(request.resource.data.reason, 120)
+        && safeText(request.resource.data.result, 40)
+        && safeText(request.resource.data.duration, 20)
+        && safeText(request.resource.data.time, 20)
+        && validContract(request.resource.data.contract)
+        && safeText(request.resource.data.observation, 500);
 
       allow read: if currentUserExists()
         && (resource.data.uid == request.auth.uid || isAdmin());
@@ -184,10 +246,13 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName is string
-        && request.resource.data.supervisor is string
-        && request.resource.data.contract is string
-        && request.resource.data.observation is string
+        && safeText(request.resource.data.operatorName, 120)
+        && safeText(request.resource.data.supervisor, 80)
+        && safeText(request.resource.data.reason, 120)
+        && validContract(request.resource.data.contract)
+        && safeText(request.resource.data.observation, 500)
+        && safeText(request.resource.data.duration, 20)
+        && safeText(request.resource.data.time, 20)
         && request.resource.data.status == 'pending';
 
       allow read, delete: if isAdmin();
@@ -217,20 +282,69 @@ service cloud.firestore {
         ])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.operator == currentUserDoc().data.matricula
-        && request.resource.data.operatorName is string
-        && request.resource.data.supervisor is string
+        && safeText(request.resource.data.operatorName, 120)
+        && safeText(request.resource.data.supervisor, 80)
+        && safeText(request.resource.data.demandType, 40)
+        && validContract(request.resource.data.contract)
+        && safeText(request.resource.data.date, 20)
+        && safeText(request.resource.data.startHour, 10)
+        && safeText(request.resource.data.endHour, 10)
+        && safeText(request.resource.data.area, 80)
+        && safeText(request.resource.data.classe, 80)
+        && safeText(request.resource.data.point, 10)
+        && request.resource.data.suspensionItems is list
+        && request.resource.data.suspensionItems.size() <= 5
+        && request.resource.data.suspensionItems.hasOnly(['TV', 'Virtua', 'Fone'])
+        && safeText(request.resource.data.message, 1000)
         && request.resource.data.status == 'pending';
 
       allow read, delete: if isAdmin();
       allow update: if false;
     }
 
+    match /solicitacoesAcesso/{requestId} {
+      allow create: if currentUserExists()
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'matricula',
+          'nome',
+          'email',
+          'requestedAt',
+          'notificationStatus',
+          'decisionStatus',
+          'notificationAttempts',
+          'notifiedAt',
+          'reviewedAt',
+          'reviewedBy',
+          'reviewNotes'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && safeText(request.resource.data.matricula, 20)
+        && safeText(request.resource.data.nome, 120)
+        && request.resource.data.email is string
+        && request.resource.data.notificationStatus == 'pending'
+        && request.resource.data.decisionStatus == 'pending'
+        && request.resource.data.notificationAttempts == 0
+        && request.resource.data.notifiedAt == null
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.reviewedBy == ''
+        && request.resource.data.reviewNotes == '';
+
+      allow get: if currentUserExists() && resource.data.uid == request.auth.uid;
+      allow list: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
     match /configuracoesBot/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && validBotSettings(request.resource.data);
+      allow delete: if false;
     }
 
     match /supervisorGrupos/{docId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && validSupervisorGroup(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /atendimentos/{document=**} {

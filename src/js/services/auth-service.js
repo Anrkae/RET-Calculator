@@ -5,6 +5,7 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -16,6 +17,7 @@ import { auth, db } from "./firebase-config.js";
 
 const USERS_COLLECTION = "usuarios";
 const LOGIN_INDEX_COLLECTION = "loginIndex";
+const ACCESS_REQUESTS_COLLECTION = "solicitacoesAcesso";
 const AUTH_DOMAIN = "ret-calculator.app";
 
 function normalizeMatricula(value) {
@@ -61,7 +63,7 @@ async function ensureLoginIndex({ uid, matricula, email }) {
   const normalizedMatricula = normalizeMatricula(matricula);
 
   if (!uid || !normalizedMatricula) {
-    throw new Error("Não foi possível preparar o índice de login.");
+    throw new Error("Nao foi possivel preparar o indice de login.");
   }
 
   await setDoc(doc(db, LOGIN_INDEX_COLLECTION, normalizedMatricula), {
@@ -72,11 +74,30 @@ async function ensureLoginIndex({ uid, matricula, email }) {
   });
 }
 
+async function createAccessRequest(profile) {
+  if (!profile?.uid || !profile?.matricula) return;
+
+  await addDoc(collection(db, ACCESS_REQUESTS_COLLECTION), {
+    uid: profile.uid,
+    matricula: profile.matricula,
+    nome: profile.nome,
+    email: profile.email,
+    requestedAt: new Date().toISOString(),
+    notificationStatus: "pending",
+    decisionStatus: "pending",
+    notificationAttempts: 0,
+    notifiedAt: null,
+    reviewedAt: null,
+    reviewedBy: "",
+    reviewNotes: ""
+  });
+}
+
 async function searchUserByMatricula(matricula) {
   const normalizedMatricula = normalizeMatricula(matricula);
 
   if (!normalizedMatricula) {
-    throw new Error("Digite o Almope que você quer buscar.");
+    throw new Error("Digite o Almope que voce quer buscar.");
   }
 
   const loginIndexDoc = await getDoc(doc(db, LOGIN_INDEX_COLLECTION, normalizedMatricula));
@@ -116,7 +137,7 @@ async function registerOperator({ matricula, password, nome }) {
     );
   } catch (error) {
     if (error?.code === "auth/email-already-in-use") {
-      throw new Error("Esse Almope já possui acesso.");
+      throw new Error("Esse Almope ja possui acesso.");
     }
 
     throw error;
@@ -141,6 +162,7 @@ async function registerOperator({ matricula, password, nome }) {
 
   await setDoc(doc(db, USERS_COLLECTION, credential.user.uid), profile);
   await ensureLoginIndex(profile);
+  await createAccessRequest(profile);
 
   return profile;
 }
@@ -171,7 +193,7 @@ async function loginOperator({ matricula, password }) {
       error?.code === "auth/user-not-found" ||
       error?.code === "auth/wrong-password"
     ) {
-      throw new Error("Não consegui entrar com esses dados. Confira Almope e senha.");
+      throw new Error("Nao consegui entrar com esses dados. Confira Almope e senha.");
     }
 
     throw error;
@@ -223,11 +245,11 @@ async function listUsers() {
 
 async function updateUserAccess(uid, { tag, supervisor }) {
   if (!uid) {
-    throw new Error("Não consegui identificar o usuário que será atualizado.");
+    throw new Error("Nao consegui identificar o usuario que sera atualizado.");
   }
 
   if (!["cr", "adm"].includes(tag)) {
-    throw new Error("A tag informada é inválida.");
+    throw new Error("A tag informada e invalida.");
   }
 
   await updateDoc(doc(db, USERS_COLLECTION, uid), {
@@ -239,6 +261,7 @@ async function updateUserAccess(uid, { tag, supervisor }) {
 
 export {
   buildSyntheticEmail,
+  ensureLoginIndex,
   listUsers,
   loadCurrentProfile,
   loginOperator,

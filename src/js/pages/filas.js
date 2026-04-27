@@ -16,6 +16,15 @@ let currentTab = CANCELAMENTO_COLLECTION;
 let cancelamentos = [];
 let demandas = [];
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function setFeedback(message = "", type = "error") {
   const feedback = document.getElementById("queueFeedback");
   if (!feedback) return;
@@ -89,7 +98,7 @@ function renderQueues() {
   title.textContent =
     currentTab === CANCELAMENTO_COLLECTION ? "Fila de cancelamentos" : "Fila de demandas";
 
-  summary.textContent = `${items.length} item(ns) nesta visualização`;
+  summary.textContent = `${items.length} item(ns) nesta visualizacao`;
 
   cancelamentosTab.classList.toggle("is-active", currentTab === CANCELAMENTO_COLLECTION);
   cancelamentosTab.classList.toggle("ghost-button", currentTab !== CANCELAMENTO_COLLECTION);
@@ -100,7 +109,7 @@ function renderQueues() {
     list.innerHTML = `
       <div class="queue-empty">
         <strong>Nenhum item encontrado</strong>
-        <span>Quando houver registros nesta fila, eles aparecerão aqui.</span>
+        <span>Quando houver registros nesta fila, eles aparecerao aqui.</span>
       </div>
     `;
     return;
@@ -110,19 +119,19 @@ function renderQueues() {
     <article class="queue-item">
       <div class="queue-item-head">
         <div>
-          <strong>${item.operatorName || item.operator || "Sem operador"}</strong>
-          <span>Supervisor: ${item.supervisor || "não definido"}</span>
+          <strong>${escapeHtml(item.operatorName || item.operator || "Sem operador")}</strong>
+          <span>Supervisor: ${escapeHtml(item.supervisor || "nao definido")}</span>
         </div>
-        <span class="queue-status-pill" data-status="${item.status || "pending"}">${getStatusLabel(item.status)}</span>
+        <span class="queue-status-pill" data-status="${escapeHtml(item.status || "pending")}">${escapeHtml(getStatusLabel(item.status))}</span>
       </div>
 
       <div class="queue-item-body">
-        <span>${buildQueueDescription(item)}</span>
-        <small>${item.createdAt || "-"}</small>
+        <span>${escapeHtml(buildQueueDescription(item))}</span>
+        <small>${escapeHtml(item.createdAt || "-")}</small>
       </div>
 
       <div class="queue-item-actions">
-        <button class="table-action queue-delete-button" type="button" data-queue-id="${item.id}">
+        <button class="table-action queue-delete-button" type="button" data-queue-id="${escapeHtml(item.id)}">
           Apagar
         </button>
       </div>
@@ -141,7 +150,7 @@ async function carregarFilas() {
     renderQueues();
   } catch (error) {
     console.error("Erro ao carregar filas:", error);
-    setFeedback(error.message || "Não foi possível carregar as filas agora.", "error");
+    setFeedback(error.message || "Nao foi possivel carregar as filas agora.", "error");
   }
 }
 
@@ -154,7 +163,7 @@ async function handleDeleteQueueItem(id) {
     await carregarFilas();
   } catch (error) {
     console.error("Erro ao remover item da fila:", error);
-    setFeedback(error.message || "Não foi possível remover este item.", "error");
+    setFeedback(error.message || "Nao foi possivel remover este item.", "error");
   }
 }
 
@@ -168,7 +177,7 @@ async function handleAdminLogin() {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setAuthFeedback("Não encontrei um acesso ativo para esse Almope.", "error");
+      setAuthFeedback("Nao encontrei um acesso ativo para esse Almope.", "error");
       return;
     }
 
@@ -176,7 +185,7 @@ async function handleAdminLogin() {
 
     if (refreshedProfile?.tag !== "adm") {
       await logoutOperator();
-      setAuthFeedback("Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
+      setAuthFeedback("Seu acesso foi reconhecido, mas esta area e exclusiva para administradores.", "error");
       return;
     }
 
@@ -184,7 +193,7 @@ async function handleAdminLogin() {
     showQueueApp(currentProfile);
     await carregarFilas();
   } catch (error) {
-    setAuthFeedback(error.message || "Não foi possível entrar.", "error");
+    setAuthFeedback(error.message || "Nao foi possivel entrar.", "error");
   }
 }
 
@@ -199,7 +208,7 @@ async function initializeQueuePage() {
   if (currentProfile.tag !== "adm") {
     await logoutOperator();
     showLogin();
-    setAuthFeedback("Seu acesso não tem permissão para abrir esta área.", "error");
+    setAuthFeedback("Seu acesso nao tem permissao para abrir esta area.", "error");
     return;
   }
 
@@ -254,9 +263,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initializeQueuePage();
   } catch (error) {
-    console.error("Erro ao inicializar página de filas:", error);
+    console.error("Erro ao inicializar pagina de filas:", error);
     showLogin();
-    setAuthFeedback("Não foi possível validar sua sessão agora.", "error");
+    setAuthFeedback("Nao foi possivel validar sua sessao agora.", "error");
   } finally {
     document.body.classList.remove("auth-pending");
   }

@@ -12,6 +12,15 @@ const {
   updateUserAccess
 } = authService;
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function normalizeMatricula(value) {
   return String(value || "").replace(/\D/g, "").trim();
 }
@@ -151,12 +160,12 @@ function renderizarTabela(dados) {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${op}</td>
-      <td>${atendidas}</td>
-      <td>${cancelados}</td>
+      <td>${escapeHtml(op)}</td>
+      <td>${escapeHtml(atendidas)}</td>
+      <td>${escapeHtml(cancelados)}</td>
       <td>
         <span class="rate-badge" style="background:${getCorTaxa(taxa)};color:white">
-          ${taxa}%
+          ${escapeHtml(taxa)}%
         </span>
       </td>
     `;
@@ -178,7 +187,7 @@ async function handleSearchUser() {
   setFeedback("userSearchFeedback", "");
 
   if (!matricula) {
-    setFeedback("userSearchFeedback", "Digite o Almope que você quer localizar.", "error");
+    setFeedback("userSearchFeedback", "Digite o Almope que voce quer localizar.", "error");
     return;
   }
 
@@ -188,23 +197,23 @@ async function handleSearchUser() {
       : await fallbackSearchUserByMatricula(matricula);
 
     if (!user) {
-      setFeedback("userSearchFeedback", "Não encontrei um colaborador com esse Almope.", "error");
+      setFeedback("userSearchFeedback", "Nao encontrei um colaborador com esse Almope.", "error");
       return;
     }
 
     selectedUser = user;
     renderSelectedUser();
     closeUserSearchModal();
-    setFeedback("usersFeedback", `Colaborador ${user.nome} carregado para edição.`, "success");
+    setFeedback("usersFeedback", `Colaborador ${user.nome} carregado para edicao.`, "success");
   } catch (error) {
     console.error("Erro ao buscar colaborador:", error);
-    setFeedback("userSearchFeedback", error.message || "Não foi possível buscar esse colaborador agora.", "error");
+    setFeedback("userSearchFeedback", error.message || "Nao foi possivel buscar esse colaborador agora.", "error");
   }
 }
 
 async function fallbackSearchUserByMatricula(matricula) {
   if (!authService.listUsers) {
-    throw new Error("A busca de colaborador ainda não está disponível nesta versão carregada.");
+    throw new Error("A busca de colaborador ainda nao esta disponivel nesta versao carregada.");
   }
 
   const users = await authService.listUsers();
@@ -233,7 +242,7 @@ async function handleSaveSelectedUser() {
     setFeedback("usersFeedback", "Acesso atualizado com sucesso.", "success");
   } catch (error) {
     console.error("Erro ao atualizar acesso:", error);
-    setFeedback("usersFeedback", error.message || "Não foi possível atualizar o acesso.", "error");
+    setFeedback("usersFeedback", error.message || "Nao foi possivel atualizar o acesso.", "error");
   }
 }
 
@@ -247,7 +256,7 @@ async function handleAdminLogin() {
     const result = await loginOperator({ matricula, password });
 
     if (!result.exists) {
-      setFeedback("adminAuthFeedback", "Não encontrei um acesso ativo para esse Almope.", "error");
+      setFeedback("adminAuthFeedback", "Nao encontrei um acesso ativo para esse Almope.", "error");
       return;
     }
 
@@ -255,7 +264,7 @@ async function handleAdminLogin() {
 
     if (refreshedProfile?.tag !== "adm") {
       await logoutOperator();
-      setFeedback("adminAuthFeedback", "Seu acesso foi reconhecido, mas esta área é exclusiva para administradores.", "error");
+      setFeedback("adminAuthFeedback", "Seu acesso foi reconhecido, mas esta area e exclusiva para administradores.", "error");
       return;
     }
 
@@ -263,7 +272,7 @@ async function handleAdminLogin() {
     showAdminApp(currentProfile);
     await carregarDados();
   } catch (error) {
-    setFeedback("adminAuthFeedback", error.message || "Não foi possível entrar.", "error");
+    setFeedback("adminAuthFeedback", error.message || "Nao foi possivel entrar.", "error");
   }
 }
 
@@ -278,7 +287,7 @@ async function initializeAdmin() {
   if (currentProfile.tag !== "adm") {
     await logoutOperator();
     showLogin();
-    setFeedback("adminAuthFeedback", "Seu acesso não tem permissão para abrir esta área administrativa.", "error");
+    setFeedback("adminAuthFeedback", "Seu acesso nao tem permissao para abrir esta area administrativa.", "error");
     return;
   }
 
@@ -315,7 +324,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const labels = {
       diario: "de hoje",
       semanal: "desta semana",
-      mensal: "deste mês"
+      mensal: "deste mes"
     };
     document.getElementById("periodLabel").textContent =
       `Exibindo resultados ${labels[periodFilter.value]}`;
@@ -352,9 +361,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initializeAdmin();
   } catch (error) {
-    console.error("Erro ao inicializar área administrativa:", error);
+    console.error("Erro ao inicializar area administrativa:", error);
     showLogin();
-    setFeedback("adminAuthFeedback", "Não foi possível validar sua sessão agora.", "error");
+    setFeedback("adminAuthFeedback", "Nao foi possivel validar sua sessao agora.", "error");
   } finally {
     document.body.classList.remove("auth-pending");
   }
