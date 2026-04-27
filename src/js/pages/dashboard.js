@@ -581,8 +581,9 @@ function renderDemandCalendar() {
     const currentDate = new Date(demandCalendarYear, demandCalendarMonth, day);
     const isSelected = iso === selectedIso;
     const isPastDate = currentDate < today;
+    const isToday = currentDate.getTime() === today.getTime();
     cells.push(
-      `<button class="calendar-day${isSelected ? " is-selected" : ""}" type="button" data-calendar-day="${day}" ${isPastDate ? "disabled" : ""}>${day}</button>`
+      `<button class="calendar-day${isSelected ? " is-selected" : ""}${isToday ? " is-today" : ""}" type="button" data-calendar-day="${day}" ${isPastDate ? "disabled" : ""}>${day}</button>`
     );
   }
 
