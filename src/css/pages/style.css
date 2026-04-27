@@ -1019,6 +1019,16 @@ border-color:transparent;
 position:relative;
 }
 
+.custom-date-picker.is-open::before{
+content:"";
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.46);
+backdrop-filter:blur(2px);
+pointer-events:none;
+z-index:5;
+}
+
 .demand-calendar{
 position:absolute;
 top:calc(100% + 10px);

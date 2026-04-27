@@ -593,16 +593,20 @@ function renderDemandCalendar() {
 function openDemandCalendar() {
   const calendar = document.getElementById("demandCalendar");
   const trigger = document.getElementById("demandDateTrigger");
+  const wrapper = document.querySelector(".custom-date-picker");
   calendar?.classList.remove("hidden");
   trigger?.setAttribute("aria-expanded", "true");
+  wrapper?.classList.add("is-open");
   renderDemandCalendar();
 }
 
 function closeDemandCalendar() {
   const calendar = document.getElementById("demandCalendar");
   const trigger = document.getElementById("demandDateTrigger");
+  const wrapper = document.querySelector(".custom-date-picker");
   calendar?.classList.add("hidden");
   trigger?.setAttribute("aria-expanded", "false");
+  wrapper?.classList.remove("is-open");
 }
 
 function selectDemandDate(day) {
