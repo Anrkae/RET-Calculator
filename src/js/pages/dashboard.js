@@ -1598,18 +1598,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  demandModal?.addEventListener("click", (event) => {
-    if (event.target === demandModal) {
-      closeDemandModal();
-    }
-  });
-
-  calendarModal?.addEventListener("click", (event) => {
-    if (event.target === calendarModal) {
-      closeDemandCalendar();
-    }
-  });
-
   prevMonthBtn?.addEventListener("click", () => {
     demandCalendarMonth -= 1;
     if (demandCalendarMonth < 0) {
