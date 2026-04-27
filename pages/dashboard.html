@@ -176,7 +176,31 @@
     </div>
   </div>
 
-  <div id="calendarBackdrop" class="calendar-backdrop hidden" aria-hidden="true"></div>
+  <div id="calendarModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+    <div class="modal-card fade-up calendar-modal-card">
+      <div class="calendar-modal-header">
+        <div>
+          <h3 id="calendarModalTitle">Selecionar data</h3>
+          <p class="modal-copy">Escolha uma data disponível a partir de hoje.</p>
+        </div>
+        <button id="closeCalendarModalBtn" class="icon-button toolbar-icon-button demand-close-button" type="button" aria-label="Fechar calendário" title="Fechar">
+          <img src="../assets/icons/close.svg" alt="" aria-hidden="true">
+        </button>
+      </div>
+
+      <div id="demandCalendar" class="demand-calendar">
+        <div class="demand-calendar-header">
+          <button id="demandCalendarPrev" class="calendar-nav-button" type="button" aria-label="Mês anterior">‹</button>
+          <strong id="demandCalendarLabel"></strong>
+          <button id="demandCalendarNext" class="calendar-nav-button" type="button" aria-label="Próximo mês">›</button>
+        </div>
+        <div class="demand-calendar-weekdays">
+          <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+        </div>
+        <div id="demandCalendarGrid" class="demand-calendar-grid"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="../src/js/ui/pip-snippet.js"></script>
   <script src="../src/js/ui/animations.js"></script>

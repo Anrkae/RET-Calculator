@@ -497,22 +497,9 @@ function buildDateFieldsTemplate() {
   return `
     <div>
       <label for="demandDateDisplay">Data</label>
-      <div class="custom-date-picker">
-        <button id="demandDateTrigger" class="custom-date-trigger" type="button" aria-expanded="false">
-          <span id="demandDateDisplay">${selectedDemandDate || "Selecionar data"}</span>
-        </button>
-        <div id="demandCalendar" class="demand-calendar hidden">
-          <div class="demand-calendar-header">
-            <button id="demandCalendarPrev" class="calendar-nav-button" type="button" aria-label="Mês anterior">‹</button>
-            <strong id="demandCalendarLabel"></strong>
-            <button id="demandCalendarNext" class="calendar-nav-button" type="button" aria-label="Próximo mês">›</button>
-          </div>
-          <div class="demand-calendar-weekdays">
-            <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-          </div>
-          <div id="demandCalendarGrid" class="demand-calendar-grid"></div>
-        </div>
-      </div>
+      <button id="demandDateTrigger" class="custom-date-trigger" type="button" aria-expanded="false">
+        <span id="demandDateDisplay">${selectedDemandDate || "Selecionar data"}</span>
+      </button>
     </div>
   `;
 }
@@ -591,26 +578,18 @@ function renderDemandCalendar() {
 }
 
 function openDemandCalendar() {
-  const calendar = document.getElementById("demandCalendar");
+  const calendarModal = document.getElementById("calendarModal");
   const trigger = document.getElementById("demandDateTrigger");
-  const wrapper = document.querySelector(".custom-date-picker");
-  const backdrop = document.getElementById("calendarBackdrop");
-  calendar?.classList.remove("hidden");
+  calendarModal?.classList.remove("hidden");
   trigger?.setAttribute("aria-expanded", "true");
-  wrapper?.classList.add("is-open");
-  backdrop?.classList.remove("hidden");
   renderDemandCalendar();
 }
 
 function closeDemandCalendar() {
-  const calendar = document.getElementById("demandCalendar");
+  const calendarModal = document.getElementById("calendarModal");
   const trigger = document.getElementById("demandDateTrigger");
-  const wrapper = document.querySelector(".custom-date-picker");
-  const backdrop = document.getElementById("calendarBackdrop");
-  calendar?.classList.add("hidden");
+  calendarModal?.classList.add("hidden");
   trigger?.setAttribute("aria-expanded", "false");
-  wrapper?.classList.remove("is-open");
-  backdrop?.classList.add("hidden");
 }
 
 function selectDemandDate(day) {
@@ -624,41 +603,9 @@ function selectDemandDate(day) {
 
 function attachDemandFieldEnhancements() {
   const dateTrigger = document.getElementById("demandDateTrigger");
-  const prevMonthBtn = document.getElementById("demandCalendarPrev");
-  const nextMonthBtn = document.getElementById("demandCalendarNext");
-  const calendarGrid = document.getElementById("demandCalendarGrid");
 
   dateTrigger?.addEventListener("click", () => {
-    const calendar = document.getElementById("demandCalendar");
-    if (calendar?.classList.contains("hidden")) {
-      openDemandCalendar();
-    } else {
-      closeDemandCalendar();
-    }
-  });
-
-  prevMonthBtn?.addEventListener("click", () => {
-    demandCalendarMonth -= 1;
-    if (demandCalendarMonth < 0) {
-      demandCalendarMonth = 11;
-      demandCalendarYear -= 1;
-    }
-    renderDemandCalendar();
-  });
-
-  nextMonthBtn?.addEventListener("click", () => {
-    demandCalendarMonth += 1;
-    if (demandCalendarMonth > 11) {
-      demandCalendarMonth = 0;
-      demandCalendarYear += 1;
-    }
-    renderDemandCalendar();
-  });
-
-  calendarGrid?.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-calendar-day]");
-    if (!target) return;
-    selectDemandDate(Number(target.dataset.calendarDay));
+    openDemandCalendar();
   });
 }
 
@@ -1589,7 +1536,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
   const cancelDemandBtn = document.getElementById("cancelDemandBtn");
   const submitDemandBtn = document.getElementById("submitDemandBtn");
-  const calendarBackdrop = document.getElementById("calendarBackdrop");
+  const calendarModal = document.getElementById("calendarModal");
+  const closeCalendarModalBtn = document.getElementById("closeCalendarModalBtn");
+  const prevMonthBtn = document.getElementById("demandCalendarPrev");
+  const nextMonthBtn = document.getElementById("demandCalendarNext");
+  const calendarGrid = document.getElementById("demandCalendarGrid");
   const prefAutoOpenPip = document.getElementById("prefAutoOpenPip");
   const prefAskCancelObservation = document.getElementById("prefAskCancelObservation");
   const prefShowCancelContract = document.getElementById("prefShowCancelContract");
@@ -1606,7 +1557,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
-  calendarBackdrop?.addEventListener("click", closeDemandCalendar);
+  closeCalendarModalBtn?.addEventListener("click", closeDemandCalendar);
   prefAutoOpenPip?.addEventListener("change", () => {
     updateDraftDashboardPreference("autoOpenPipOnPageChange", Boolean(prefAutoOpenPip.checked));
   });
@@ -1653,16 +1604,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  calendarModal?.addEventListener("click", (event) => {
+    if (event.target === calendarModal) {
+      closeDemandCalendar();
+    }
+  });
+
+  prevMonthBtn?.addEventListener("click", () => {
+    demandCalendarMonth -= 1;
+    if (demandCalendarMonth < 0) {
+      demandCalendarMonth = 11;
+      demandCalendarYear -= 1;
+    }
+    renderDemandCalendar();
+  });
+
+  nextMonthBtn?.addEventListener("click", () => {
+    demandCalendarMonth += 1;
+    if (demandCalendarMonth > 11) {
+      demandCalendarMonth = 0;
+      demandCalendarYear += 1;
+    }
+    renderDemandCalendar();
+  });
+
+  calendarGrid?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-calendar-day]");
+    if (!target || target.disabled) return;
+    selectDemandDate(Number(target.dataset.calendarDay));
+  });
+
   document.addEventListener("click", (event) => {
     const selectWrap = document.getElementById("demandTypeSelectWrap");
-    const calendarWrap = document.querySelector(".custom-date-picker");
-
     if (selectWrap && !selectWrap.contains(event.target)) {
       closeDemandTypeMenu();
-    }
-
-    if (calendarWrap && !calendarWrap.contains(event.target)) {
-      closeDemandCalendar();
     }
   });
 
@@ -1675,6 +1650,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (event.key === "Escape" && demandModal && !demandModal.classList.contains("hidden")) {
       closeDemandModal();
+    }
+    if (event.key === "Escape" && calendarModal && !calendarModal.classList.contains("hidden")) {
+      closeDemandCalendar();
     }
   });
 
