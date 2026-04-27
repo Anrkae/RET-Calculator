@@ -1019,26 +1019,28 @@ border-color:transparent;
 position:relative;
 }
 
-body.calendar-open::after{
-content:"";
+.custom-date-picker.is-open{
+z-index:1003;
+}
+
+.calendar-backdrop{
 position:fixed;
 inset:0;
-background:rgba(0,0,0,0.58);
-pointer-events:none;
-z-index:1001;
+background:rgba(6,8,12,0.68);
+z-index:1000;
 }
 
 .demand-calendar{
 position:absolute;
 top:calc(100% + 10px);
 left:0;
-width:304px;
-padding:14px;
-border-radius:20px;
-background:linear-gradient(180deg, rgba(31,31,31,0.98), rgba(22,22,22,0.98));
-border:1px solid rgba(255,255,255,0.14);
-box-shadow:0 22px 44px rgba(0,0,0,0.42);
-z-index:1002;
+width:320px;
+padding:16px;
+border-radius:22px;
+background:linear-gradient(180deg, rgba(27,28,32,0.995), rgba(18,19,23,0.995));
+border:1px solid rgba(255,255,255,0.16);
+box-shadow:0 28px 56px rgba(0,0,0,0.52);
+z-index:1004;
 }
 
 .demand-calendar-header{

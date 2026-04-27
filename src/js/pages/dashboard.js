@@ -593,18 +593,24 @@ function renderDemandCalendar() {
 function openDemandCalendar() {
   const calendar = document.getElementById("demandCalendar");
   const trigger = document.getElementById("demandDateTrigger");
+  const wrapper = document.querySelector(".custom-date-picker");
+  const backdrop = document.getElementById("calendarBackdrop");
   calendar?.classList.remove("hidden");
   trigger?.setAttribute("aria-expanded", "true");
-  document.body.classList.add("calendar-open");
+  wrapper?.classList.add("is-open");
+  backdrop?.classList.remove("hidden");
   renderDemandCalendar();
 }
 
 function closeDemandCalendar() {
   const calendar = document.getElementById("demandCalendar");
   const trigger = document.getElementById("demandDateTrigger");
+  const wrapper = document.querySelector(".custom-date-picker");
+  const backdrop = document.getElementById("calendarBackdrop");
   calendar?.classList.add("hidden");
   trigger?.setAttribute("aria-expanded", "false");
-  document.body.classList.remove("calendar-open");
+  wrapper?.classList.remove("is-open");
+  backdrop?.classList.add("hidden");
 }
 
 function selectDemandDate(day) {
@@ -1583,6 +1589,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const closeDemandModalBtn = document.getElementById("closeDemandModalBtn");
   const cancelDemandBtn = document.getElementById("cancelDemandBtn");
   const submitDemandBtn = document.getElementById("submitDemandBtn");
+  const calendarBackdrop = document.getElementById("calendarBackdrop");
   const prefAutoOpenPip = document.getElementById("prefAutoOpenPip");
   const prefAskCancelObservation = document.getElementById("prefAskCancelObservation");
   const prefShowCancelContract = document.getElementById("prefShowCancelContract");
@@ -1599,6 +1606,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   closeDemandModalBtn?.addEventListener("click", closeDemandModal);
   cancelDemandBtn?.addEventListener("click", closeDemandModal);
   submitDemandBtn?.addEventListener("click", submitDemand);
+  calendarBackdrop?.addEventListener("click", closeDemandCalendar);
   prefAutoOpenPip?.addEventListener("change", () => {
     updateDraftDashboardPreference("autoOpenPipOnPageChange", Boolean(prefAutoOpenPip.checked));
   });
