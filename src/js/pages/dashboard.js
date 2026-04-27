@@ -554,6 +554,12 @@ function getCalendarMonthLabel() {
     .format(new Date(demandCalendarYear, demandCalendarMonth, 1));
 }
 
+function getTodayCalendarReference() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
 function renderDemandCalendar() {
   const grid = document.getElementById("demandCalendarGrid");
   const label = document.getElementById("demandCalendarLabel");
@@ -563,6 +569,7 @@ function renderDemandCalendar() {
   const firstDay = new Date(demandCalendarYear, demandCalendarMonth, 1).getDay();
   const daysInMonth = new Date(demandCalendarYear, demandCalendarMonth + 1, 0).getDate();
   const selectedIso = selectedDemandDate ? selectedDemandDate.split("/").reverse().join("-") : "";
+  const today = getTodayCalendarReference();
   const cells = [];
 
   for (let i = 0; i < firstDay; i += 1) {
@@ -571,9 +578,11 @@ function renderDemandCalendar() {
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const iso = `${demandCalendarYear}-${String(demandCalendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const currentDate = new Date(demandCalendarYear, demandCalendarMonth, day);
     const isSelected = iso === selectedIso;
+    const isPastDate = currentDate < today;
     cells.push(
-      `<button class="calendar-day${isSelected ? " is-selected" : ""}" type="button" data-calendar-day="${day}">${day}</button>`
+      `<button class="calendar-day${isSelected ? " is-selected" : ""}" type="button" data-calendar-day="${day}" ${isPastDate ? "disabled" : ""}>${day}</button>`
     );
   }
 
