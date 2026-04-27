@@ -1088,6 +1088,7 @@ align-items:center;
 justify-content:center;
 font-size:12px;
 font-weight:500;
+color:#ffffff;
 }
 
 .calendar-day:hover{
@@ -1096,9 +1097,10 @@ transform:none;
 }
 
 .calendar-day:disabled{
-opacity:0.3;
+opacity:0.38;
 cursor:not-allowed;
 background:rgba(255,255,255,0.015);
+color:#000000;
 }
 
 .calendar-day:disabled:hover{
