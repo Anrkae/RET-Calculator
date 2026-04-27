@@ -1630,17 +1630,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && modal && !modal.classList.contains("hidden")) {
-      closeLogoutModal();
-    }
-    if (event.key === "Escape" && preferencesModal && !preferencesModal.classList.contains("hidden")) {
-      closePreferencesModal();
-    }
-    if (event.key === "Escape" && demandModal && !demandModal.classList.contains("hidden")) {
-      closeDemandModal();
-    }
-    if (event.key === "Escape" && calendarModal && !calendarModal.classList.contains("hidden")) {
+    if (event.key !== "Escape") return;
+
+    if (calendarModal && !calendarModal.classList.contains("hidden")) {
       closeDemandCalendar();
+      return;
+    }
+
+    if (demandModal && !demandModal.classList.contains("hidden")) {
+      closeDemandModal();
+      return;
+    }
+
+    if (preferencesModal && !preferencesModal.classList.contains("hidden")) {
+      closePreferencesModal();
+      return;
+    }
+
+    if (modal && !modal.classList.contains("hidden")) {
+      closeLogoutModal();
     }
   });
 
