@@ -34,7 +34,6 @@ function defaultBotSettings() {
     demandaWebhookPath: "/webhook/demanda-whatsapp",
     wppconnectBaseUrl: "http://localhost:21465",
     wppconnectSessionName: "equipe-ret",
-    wppconnectBearerToken: "",
     n8nBaseUrl: "http://localhost:5678",
     textTemplates: defaultTextTemplates(),
     updatedAt: ""
@@ -60,6 +59,7 @@ function sanitizeLegacyTextTemplates(textTemplates = {}) {
 }
 
 function normalizeBotSettings(payload = {}) {
+  const defaults = defaultBotSettings();
   const rawTextTemplates = sanitizeLegacyTextTemplates(payload?.textTemplates || {});
   const textTemplates = {
     ...defaultTextTemplates(),
@@ -70,9 +70,19 @@ function normalizeBotSettings(payload = {}) {
   };
 
   return {
-    ...defaultBotSettings(),
-    ...payload,
-    textTemplates
+    workerIntervalMs: String(payload?.workerIntervalMs || defaults.workerIntervalMs).trim(),
+    fallbackGroupId: String(payload?.fallbackGroupId || "").trim(),
+    cancelamentoWebhookPath: String(
+      payload?.cancelamentoWebhookPath || defaults.cancelamentoWebhookPath
+    ).trim(),
+    demandaWebhookPath: String(payload?.demandaWebhookPath || defaults.demandaWebhookPath).trim(),
+    wppconnectBaseUrl: String(payload?.wppconnectBaseUrl || defaults.wppconnectBaseUrl).trim(),
+    wppconnectSessionName: String(
+      payload?.wppconnectSessionName || defaults.wppconnectSessionName
+    ).replace(/\s+/g, "").trim(),
+    n8nBaseUrl: String(payload?.n8nBaseUrl || defaults.n8nBaseUrl).trim(),
+    textTemplates,
+    updatedAt: String(payload?.updatedAt || "").trim()
   };
 }
 
@@ -83,7 +93,14 @@ async function loadBotSettings() {
     return defaultBotSettings();
   }
 
-  return normalizeBotSettings(snapshot.data());
+  const rawData = snapshot.data();
+  const normalizedSettings = normalizeBotSettings(rawData);
+
+  if ("wppconnectBearerToken" in rawData) {
+    await setDoc(doc(db, BOT_SETTINGS_COLLECTION, DEFAULT_SETTINGS_DOC), normalizedSettings);
+  }
+
+  return normalizedSettings;
 }
 
 async function saveBotSettings(settings) {

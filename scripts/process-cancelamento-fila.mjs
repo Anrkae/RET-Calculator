@@ -3,6 +3,7 @@ import process from "node:process";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
+const DEFAULT_LOCAL_ENV_FILE = process.env.RET_LOCAL_ENV_FILE || "C:\\Local Server\\ret-worker.env";
 const DEFAULT_CANCELAMENTO_WEBHOOK_URL = "http://localhost:5678/webhook/cancelamento-whatsapp";
 const DEFAULT_DEMANDA_WEBHOOK_URL = "http://localhost:5678/webhook/demanda-whatsapp";
 const DEFAULT_INTERVAL_MS = 5000;
@@ -21,6 +22,69 @@ function getArgValue(flag) {
   const index = process.argv.indexOf(flag);
   if (index === -1) return "";
   return process.argv[index + 1] || "";
+}
+
+function applyEnvOverrides(rawContent = "") {
+  for (const line of String(rawContent || "").split(/\r?\n/)) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine || trimmedLine.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmedLine.indexOf("=");
+
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmedLine.slice(0, separatorIndex).trim();
+    let value = trimmedLine.slice(separatorIndex + 1).trim();
+
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (!key || process.env[key]) {
+      continue;
+    }
+
+    process.env[key] = value;
+  }
+}
+
+async function loadLocalEnvFile(filePath = DEFAULT_LOCAL_ENV_FILE) {
+  const normalizedPath = String(filePath || "").trim();
+
+  if (!normalizedPath) return;
+
+  try {
+    const rawContent = await readFile(normalizedPath, "utf8");
+    applyEnvOverrides(rawContent);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+function getOptionValue(flag, envName = "", fallback = "") {
+  const cliValue = String(getArgValue(flag) || "").trim();
+
+  if (cliValue) {
+    return cliValue;
+  }
+
+  const envValue = envName ? String(process.env[envName] || "").trim() : "";
+  return envValue || fallback;
+}
+
+function parseIntervalMs(rawValue) {
+  const numericValue = Number(rawValue);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : DEFAULT_INTERVAL_MS;
 }
 
 async function loadServiceAccount(filePath) {
@@ -83,7 +147,7 @@ function buildSessionIdentifier(sessionName, token) {
   }
 
   if (!normalizedToken) {
-    throw new Error("Defina o token do WPPConnect nas configuracoes do bot.");
+    throw new Error("Defina o token local do WPPConnect.");
   }
 
   if (normalizedToken.startsWith(`${normalizedSessionName}:`)) {
@@ -94,9 +158,13 @@ function buildSessionIdentifier(sessionName, token) {
 }
 
 function buildWppconnectRequest(settings) {
-  const baseUrl = normalizeBaseUrl(settings?.wppconnectBaseUrl);
-  const sessionName = normalizeSessionName(settings?.wppconnectSessionName);
-  const token = normalizeToken(settings?.wppconnectBearerToken);
+  const baseUrl = normalizeBaseUrl(
+    process.env.RET_WPPCONNECT_BASE_URL || settings?.wppconnectBaseUrl
+  );
+  const sessionName = normalizeSessionName(
+    process.env.RET_WPPCONNECT_SESSION_NAME || settings?.wppconnectSessionName
+  );
+  const token = normalizeToken(process.env.RET_WPPCONNECT_BEARER_TOKEN);
 
   if (!baseUrl) {
     throw new Error("Defina a Base do WPPConnect nas configuracoes do bot.");
@@ -507,18 +575,34 @@ async function processQueues(db, cliOptions) {
 }
 
 async function main() {
-  const serviceAccountPath = getArgValue("--service-account");
-  const webhookUrl = getArgValue("--webhook-url");
+  await loadLocalEnvFile();
+
+  const serviceAccountPath = getOptionValue(
+    "--service-account",
+    "RET_FIREBASE_SERVICE_ACCOUNT_PATH"
+  );
+  const webhookUrl = getOptionValue("--webhook-url", "RET_WEBHOOK_URL");
   const cliOptions = {
-    cancelamentoWebhookUrl: getArgValue("--cancelamento-webhook-url") || webhookUrl || "",
-    demandaWebhookUrl: getArgValue("--demanda-webhook-url") || webhookUrl || "",
-    cancelamentoWebhookPath: getArgValue("--cancelamento-webhook-path") || "",
-    demandaWebhookPath: getArgValue("--demanda-webhook-path") || "",
-    n8nBaseUrl: getArgValue("--n8n-base-url") || "",
-    fallbackGroupId: getArgValue("--fallback-group-id") || "",
-    supervisorFilter: String(getArgValue("--supervisor") || "").trim()
+    cancelamentoWebhookUrl: getOptionValue(
+      "--cancelamento-webhook-url",
+      "RET_CANCELAMENTO_WEBHOOK_URL"
+    ) || webhookUrl || "",
+    demandaWebhookUrl: getOptionValue(
+      "--demanda-webhook-url",
+      "RET_DEMANDA_WEBHOOK_URL"
+    ) || webhookUrl || "",
+    cancelamentoWebhookPath: getOptionValue(
+      "--cancelamento-webhook-path",
+      "RET_CANCELAMENTO_WEBHOOK_PATH"
+    ),
+    demandaWebhookPath: getOptionValue("--demanda-webhook-path", "RET_DEMANDA_WEBHOOK_PATH"),
+    n8nBaseUrl: getOptionValue("--n8n-base-url", "RET_N8N_BASE_URL"),
+    fallbackGroupId: getOptionValue("--fallback-group-id", "RET_FALLBACK_GROUP_ID"),
+    supervisorFilter: getOptionValue("--supervisor", "RET_SUPERVISOR_FILTER")
   };
-  const intervalMs = Number(getArgValue("--interval-ms") || DEFAULT_INTERVAL_MS);
+  const intervalMs = parseIntervalMs(
+    getOptionValue("--interval-ms", "RET_WORKER_INTERVAL_MS", String(DEFAULT_INTERVAL_MS))
+  );
 
   await ensureAdmin(serviceAccountPath);
   const db = getFirestore();

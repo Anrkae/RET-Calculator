@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "process:cancelamento-fila": "node scripts/process-cancelamento-fila.mjs"
+    "process:cancelamento-fila": "node scripts/process-cancelamento-fila.mjs",
+    "wpp:helper": "node scripts/wpp-local-helper.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0"

@@ -237,6 +237,7 @@ docker start wpp-server</code></pre>
             <pre class="tool-code-block"><code>Invoke-RestMethod `
   -Method Post `
   -Uri "http://localhost:21465/api/equipe-ret/THISISMYSECURETOKEN/generate-token"</code></pre>
+            <p>Depois de gerar um token novo, atualize o arquivo local <code>C:\Local Server\ret-worker.env</code>.</p>
           </div>
         </article>
       </section>
@@ -336,14 +337,16 @@ docker start wpp-server</code></pre>
                 <span>Nome da sessao WPP</span>
                 <input id="settingsWppconnectSessionName" type="text" placeholder="equipe-ret">
               </label>
-              <label class="tool-field tool-field-full">
-                <span>Bearer token WPP</span>
-                <input id="settingsWppconnectBearerToken" type="password" placeholder="equipe-ret:$2b$10$...">
-              </label>
               <label class="tool-field">
                 <span>Base do n8n</span>
                 <input id="settingsN8nBaseUrl" type="text">
               </label>
+            </div>
+
+            <div class="tool-inline-note">
+              <strong>Helper local WPP</strong>
+              <span id="settingsLocalTokenStatus">Verificando...</span>
+              <p>O token nao vai mais para o navegador. Ele fica apenas no arquivo local <code>C:\Local Server\ret-worker.env</code> e e usado pelo helper local.</p>
             </div>
           </article>
 

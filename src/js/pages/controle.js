@@ -15,6 +15,7 @@ import {
   checkSessionConnection,
   extractConnectionStatus,
   extractQrCode,
+  getHelperHealth,
   getQrCodeSession,
   startSession
 } from "../services/wppconnect-service.js";
@@ -36,7 +37,6 @@ const SETTINGS_FIELD_IDS = [
   "settingsDemandaWebhook",
   "settingsWppconnectBaseUrl",
   "settingsWppconnectSessionName",
-  "settingsWppconnectBearerToken",
   "settingsN8nBaseUrl"
 ];
 const TEMPLATE_FIELD_IDS = [
@@ -71,7 +71,6 @@ function normalizeSettings(settings = {}) {
     demandaWebhookPath: String(settings.demandaWebhookPath || "").trim(),
     wppconnectBaseUrl: String(settings.wppconnectBaseUrl || "").trim(),
     wppconnectSessionName: String(settings.wppconnectSessionName || "").trim(),
-    wppconnectBearerToken: String(settings.wppconnectBearerToken || "").trim(),
     n8nBaseUrl: String(settings.n8nBaseUrl || "").trim()
   };
 }
@@ -105,7 +104,6 @@ function readCurrentSettingsForm() {
     demandaWebhookPath: document.getElementById("settingsDemandaWebhook")?.value.trim() || "",
     wppconnectBaseUrl: document.getElementById("settingsWppconnectBaseUrl")?.value.trim() || "",
     wppconnectSessionName: document.getElementById("settingsWppconnectSessionName")?.value.trim() || "",
-    wppconnectBearerToken: document.getElementById("settingsWppconnectBearerToken")?.value.trim() || "",
     n8nBaseUrl: document.getElementById("settingsN8nBaseUrl")?.value.trim() || ""
   };
 }
@@ -122,8 +120,7 @@ function readCurrentTemplatesForm() {
 function getWhatsappConfig() {
   return {
     baseUrl: botSettings?.wppconnectBaseUrl || "",
-    sessionName: botSettings?.wppconnectSessionName || "",
-    token: botSettings?.wppconnectBearerToken || ""
+    sessionName: botSettings?.wppconnectSessionName || ""
   };
 }
 
@@ -186,6 +183,21 @@ function renderWhatsappShell() {
 
   document.getElementById("whatsappSessionName").textContent = config.sessionName || "Nao definido";
   document.getElementById("whatsappBaseUrl").textContent = config.baseUrl || "Nao definido";
+}
+
+async function refreshLocalHelperStatus() {
+  const statusElement = document.getElementById("settingsLocalTokenStatus");
+
+  if (!statusElement) return;
+
+  try {
+    const payload = await getHelperHealth();
+    statusElement.textContent = payload?.tokenConfigured
+      ? "Helper local ativo"
+      : "Helper local sem token";
+  } catch {
+    statusElement.textContent = "Helper local indisponivel";
+  }
 }
 
 function renderWhatsappStatus(connected = false, statusText = "Nao verificado") {
@@ -470,7 +482,6 @@ function renderBotSettings() {
   document.getElementById("settingsDemandaWebhook").value = botSettings.demandaWebhookPath || "";
   document.getElementById("settingsWppconnectBaseUrl").value = botSettings.wppconnectBaseUrl || "";
   document.getElementById("settingsWppconnectSessionName").value = botSettings.wppconnectSessionName || "";
-  document.getElementById("settingsWppconnectBearerToken").value = botSettings.wppconnectBearerToken || "";
   document.getElementById("settingsN8nBaseUrl").value = botSettings.n8nBaseUrl || "";
   document.getElementById("settingsUpdatedAt").textContent = botSettings.updatedAt || "Ainda nao salvo";
   document.getElementById("settingsSupervisorCount").textContent = String(supervisorGroups.length);
@@ -637,6 +648,7 @@ async function loadControlData() {
   renderTextTemplates();
   renderWhatsappStatus(false, "Nao verificado");
   renderQrCode();
+  await refreshLocalHelperStatus();
   await refreshOverview();
   syncSaveButtonState();
 }

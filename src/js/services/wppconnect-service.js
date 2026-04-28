@@ -1,3 +1,26 @@
+const WPP_HELPER_BASE_URL = "http://localhost:21466";
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const raw = await response.text();
+  let data = null;
+
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = raw;
+  }
+
+  if (!response.ok) {
+    const message =
+      (data && typeof data === "object" && (data.message || data.error)) ||
+      `Helper local respondeu com status ${response.status}.`;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
 function normalizeBaseUrl(value) {
   const normalized = String(value || "").trim().replace(/\/+$/, "");
 
@@ -12,128 +35,61 @@ function normalizeSessionName(value) {
   return String(value || "").replace(/\s+/g, "").trim();
 }
 
-function normalizeToken(value) {
-  return String(value || "").replace(/\s+/g, "").trim();
-}
-
-function buildSessionIdentifier(sessionName, token) {
-  const normalizedSessionName = normalizeSessionName(sessionName);
-  const normalizedToken = normalizeToken(token);
-
-  if (!normalizedSessionName) {
-    throw new Error("Defina o nome da sessao do WPPConnect nas configuracoes do bot.");
-  }
-
-  if (!normalizedToken) {
-    throw new Error("Defina o token do WPPConnect nas configuracoes do bot.");
-  }
-
-  if (normalizedToken.startsWith(`${normalizedSessionName}:`)) {
-    return encodeURIComponent(normalizedToken);
-  }
-
-  return encodeURIComponent(normalizedSessionName);
-}
-
-function buildHeaders(token = "", extraHeaders = {}) {
-  const normalizedToken = normalizeToken(token);
-  const headers = {
-    Accept: "application/json",
-    ...extraHeaders
-  };
-
-  if (normalizedToken && !normalizedToken.includes(":")) {
-    headers.Authorization = `Bearer ${normalizedToken}`;
-  }
-
-  return headers;
-}
-
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-
-  if (contentType.includes("image/png")) {
-    const buffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-
-    if (!response.ok) {
-      throw new Error(`WPPConnect respondeu com status ${response.status}.`);
-    }
-
-    return {
-      status: "QRCODE",
-      qrcode: `data:image/png;base64,${btoa(binary)}`
-    };
-  }
-
-  const raw = await response.text();
-  let data = null;
-
-  try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch {
-    data = raw;
-  }
-
-  if (!response.ok) {
-    const message =
-      (data && typeof data === "object" && (data.message || data.error)) ||
-      `WPPConnect respondeu com status ${response.status}.`;
-    throw new Error(message);
-  }
-
-  return data;
-}
-
-function assertConfig(baseUrl, sessionName, token) {
+function assertConfig(baseUrl, sessionName) {
   if (!normalizeBaseUrl(baseUrl)) {
     throw new Error("Defina a Base do WPPConnect nas configuracoes do bot.");
   }
 
-  buildSessionIdentifier(sessionName, token);
+  if (!normalizeSessionName(sessionName)) {
+    throw new Error("Defina o nome da sessao do WPPConnect nas configuracoes do bot.");
+  }
 }
 
-function buildEndpoint(baseUrl, sessionName, token, route) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
-  const sessionIdentifier = buildSessionIdentifier(sessionName, token);
-  return `${normalizedBaseUrl}/api/${sessionIdentifier}/${route}`;
-}
-
-async function checkSessionConnection({ baseUrl, sessionName, token }) {
-  assertConfig(baseUrl, sessionName, token);
-
-  return requestJson(buildEndpoint(baseUrl, sessionName, token, "check-connection-session"), {
-    method: "GET",
-    headers: buildHeaders(token)
-  });
-}
-
-async function startSession({ baseUrl, sessionName, token, waitQrCode = true }) {
-  assertConfig(baseUrl, sessionName, token);
-
-  return requestJson(buildEndpoint(baseUrl, sessionName, token, "start-session"), {
+async function requestHelper(path, payload = {}) {
+  return requestJson(`${WPP_HELPER_BASE_URL}${path}`, {
     method: "POST",
-    headers: buildHeaders(token, {
-      "Content-Type": "application/json"
-    }),
-    body: JSON.stringify({
-      waitQrCode
-    })
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+    body: JSON.stringify(payload)
   });
 }
 
-async function getQrCodeSession({ baseUrl, sessionName, token }) {
-  assertConfig(baseUrl, sessionName, token);
-
-  return requestJson(buildEndpoint(baseUrl, sessionName, token, "qrcode-session"), {
+async function getHelperHealth() {
+  return requestJson(`${WPP_HELPER_BASE_URL}/health`, {
     method: "GET",
-    headers: buildHeaders(token)
+    headers: {
+      Accept: "application/json"
+    }
+  });
+}
+
+async function checkSessionConnection({ baseUrl, sessionName }) {
+  assertConfig(baseUrl, sessionName);
+
+  return requestHelper("/wpp/check-connection-session", {
+    baseUrl: normalizeBaseUrl(baseUrl),
+    sessionName: normalizeSessionName(sessionName)
+  });
+}
+
+async function startSession({ baseUrl, sessionName, waitQrCode = true }) {
+  assertConfig(baseUrl, sessionName);
+
+  return requestHelper("/wpp/start-session", {
+    baseUrl: normalizeBaseUrl(baseUrl),
+    sessionName: normalizeSessionName(sessionName),
+    waitQrCode
+  });
+}
+
+async function getQrCodeSession({ baseUrl, sessionName }) {
+  assertConfig(baseUrl, sessionName);
+
+  return requestHelper("/wpp/qrcode-session", {
+    baseUrl: normalizeBaseUrl(baseUrl),
+    sessionName: normalizeSessionName(sessionName)
   });
 }
 
@@ -156,7 +112,9 @@ function extractConnectionStatus(payload) {
   const flatText = candidates
     .flatMap((item) => {
       if (typeof item === "string") return [item];
-      if (item && typeof item === "object") return Object.values(item).filter((value) => typeof value === "string");
+      if (item && typeof item === "object") {
+        return Object.values(item).filter((value) => typeof value === "string");
+      }
       return [];
     })
     .join(" ");
@@ -174,36 +132,18 @@ function extractConnectionStatus(payload) {
 }
 
 function extractQrCode(payload) {
-  if (!payload) return "";
-
-  const queue = [payload];
-  const seen = new Set();
-
-  while (queue.length) {
-    const current = queue.shift();
-    if (!current || seen.has(current)) continue;
-    if (typeof current === "string") {
-      if (current.startsWith("data:image")) return current;
-      if (/^[A-Za-z0-9+/=\r\n]+$/.test(current) && current.length > 500) {
-        return `data:image/png;base64,${current.replace(/\s+/g, "")}`;
-      }
-      continue;
-    }
-    if (typeof current !== "object") continue;
-    seen.add(current);
-
-    for (const value of Object.values(current)) {
-      queue.push(value);
-    }
+  if (!payload || typeof payload !== "object") {
+    return "";
   }
 
-  return "";
+  return String(payload.qrcode || payload.base64 || "").trim();
 }
 
 export {
   checkSessionConnection,
   extractConnectionStatus,
   extractQrCode,
+  getHelperHealth,
   getQrCodeSession,
   startSession
 };
