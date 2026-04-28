@@ -29,7 +29,7 @@ function applyEnvOverrides(rawContent = "") {
       value = value.slice(1, -1);
     }
 
-    if (!key || process.env[key]) {
+    if (!key) {
       continue;
     }
 
