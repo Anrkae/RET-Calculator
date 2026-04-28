@@ -11,6 +11,7 @@ const BOT_SETTINGS_COLLECTION = "configuracoesBot";
 const BOT_SETTINGS_DOC = "default";
 const SUPERVISOR_GROUPS_COLLECTION = "supervisorGrupos";
 const ACCESS_REQUESTS_COLLECTION = "solicitacoesAcesso";
+const WORKER_INSTANCE_ID = `worker-${process.pid}-${Date.now()}`;
 const DEFAULT_TEXT_TEMPLATES = {
   cancelamento: "❌ *{{cancelCountOfDay}}° Cancelamento de {{operatorName}}*\n{{contract}}\n\n*Motivo:* {{reason}}\n\n{{observation}}",
   demandaEncaixeVt: "📌 *{{operatorName}}* - *Encaixe VT*\n\n📄 *{{contract}}*\n📅 *{{date}}* - *das {{startHour}} às {{endHour}}*\n👨🏾‍🔧 *{{area}}* - *{{classe}}*",
@@ -362,6 +363,40 @@ async function markBlocked(docSnap, data, reason) {
   });
 }
 
+async function claimQueueDocument(db, docRef, statusField, processingStatus) {
+  return db.runTransaction(async (transaction) => {
+    const freshSnap = await transaction.get(docRef);
+
+    if (!freshSnap.exists) {
+      return {
+        claimed: false,
+        reason: "Documento removido antes do processamento."
+      };
+    }
+
+    const freshData = freshSnap.data() || {};
+
+    if (freshData[statusField] !== "pending") {
+      return {
+        claimed: false,
+        reason: `Status atual ja nao e pending: ${freshData[statusField] || "vazio"}`
+      };
+    }
+
+    transaction.update(docRef, {
+      [statusField]: processingStatus,
+      processingStartedAt: new Date().toISOString(),
+      processingWorkerId: WORKER_INSTANCE_ID,
+      lastAttemptAt: new Date().toISOString()
+    });
+
+    return {
+      claimed: true,
+      data: freshData
+    };
+  });
+}
+
 async function sendWebhook(webhookUrl, payload) {
   const response = await fetch(webhookUrl, {
     method: "POST",
@@ -386,7 +421,14 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
   if (snapshot.empty) return;
 
   for (const docSnap of snapshot.docs) {
-    const data = docSnap.data();
+    const claim = await claimQueueDocument(db, docSnap.ref, "status", "processing");
+
+    if (!claim.claimed) {
+      console.log(`Cancelamento ignorado: ${docSnap.id} -> ${claim.reason}`);
+      continue;
+    }
+
+    const data = claim.data;
     const routing = resolveRouting(data, runtimeConfig, cliOptions);
 
     if (!routing.allowed) {
@@ -427,6 +469,7 @@ async function processCancelamentos(db, webhookUrl, runtimeConfig, cliOptions) {
       console.log(`Cancelamento enviado: ${docSnap.id} -> ${routing.groupId}`);
     } catch (error) {
       await docSnap.ref.update({
+        status: "pending",
         attempts: (data.attempts || 0) + 1,
         lastAttemptAt: new Date().toISOString(),
         lastError: error.message,
@@ -449,7 +492,19 @@ async function processAccessRequests(db, webhookUrl, runtimeConfig, cliOptions) 
   if (snapshot.empty) return;
 
   for (const docSnap of snapshot.docs) {
-    const data = docSnap.data();
+    const claim = await claimQueueDocument(
+      db,
+      docSnap.ref,
+      "notificationStatus",
+      "processing"
+    );
+
+    if (!claim.claimed) {
+      console.log(`Solicitacao de acesso ignorada: ${docSnap.id} -> ${claim.reason}`);
+      continue;
+    }
+
+    const data = claim.data;
     const groupId = String(
       cliOptions.fallbackGroupId || runtimeConfig.settings.fallbackGroupId || ""
     ).trim();
@@ -490,6 +545,7 @@ async function processAccessRequests(db, webhookUrl, runtimeConfig, cliOptions) 
       console.log(`Solicitacao de acesso notificada: ${docSnap.id} -> ${groupId}`);
     } catch (error) {
       await docSnap.ref.update({
+        notificationStatus: "pending",
         notificationAttempts: (data.notificationAttempts || 0) + 1,
         lastAttemptAt: new Date().toISOString(),
         lastError: error.message,
@@ -511,7 +567,14 @@ async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
   if (snapshot.empty) return;
 
   for (const docSnap of snapshot.docs) {
-    const data = docSnap.data();
+    const claim = await claimQueueDocument(db, docSnap.ref, "status", "processing");
+
+    if (!claim.claimed) {
+      console.log(`Demanda ignorada: ${docSnap.id} -> ${claim.reason}`);
+      continue;
+    }
+
+    const data = claim.data;
     const routing = resolveRouting(data, runtimeConfig, cliOptions);
 
     if (!routing.allowed) {
@@ -544,6 +607,7 @@ async function processDemandas(db, webhookUrl, runtimeConfig, cliOptions) {
       console.log(`Demanda enviada: ${docSnap.id} -> ${routing.groupId}`);
     } catch (error) {
       await docSnap.ref.update({
+        status: "pending",
         attempts: (data.attempts || 0) + 1,
         lastAttemptAt: new Date().toISOString(),
         lastError: error.message,
